@@ -135,7 +135,7 @@ export function StartupAnimationSection({
                 </div>
                 <input ref={transitionFileRef} type="file" accept=".json,application/json" onChange={onImportTransition} className="hidden" />
                 {transitionMsg && (
-                  <p className={`text-caption ${transitionMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>{transitionMsg.text}</p>
+                  <p className={`text-caption ${transitionMsg.ok ? 'text-state-success' : 'text-state-error'}`}>{transitionMsg.text}</p>
                 )}
                 <div className="grid grid-cols-3 gap-2">
                   {([

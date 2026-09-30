@@ -1,7 +1,15 @@
 import { useState } from 'react'
-import { Mic, Palette, Sliders, Code, Sparkles, Layers, Zap, Droplets, Sun } from 'lucide-react'
+import {
+  Mic, Palette, Sliders, Code, Sparkles, Layers, Zap, Droplets, Sun,
+  Eye, EyeOff, Volume2, MessageCircle, RotateCcw, Infinity as InfinityIcon
+} from 'lucide-react'
 import type { AppSettings, VoiceDiscussionStyle } from '@shared/types'
-import { SectionTitle } from './shared-components'
+import { SectionTitle, ToggleRow } from './shared-components'
+import { useTtsVoices, sortVoicesZh } from '@renderer/hooks/useTtsVoices'
+import {
+  DEFAULT_DISCUSSION_PROMPT,
+  DEFAULT_DISCUSSION_MAX_TOKENS
+} from '@renderer/hooks/useVoiceDiscussion'
 
 const STYLE_OPTIONS: { value: VoiceDiscussionStyle; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: 'default', label: '默认', icon: <Layers size={16} />, desc: '跟随系统主题的经典卡片风格' },
@@ -19,6 +27,15 @@ interface VoiceDiscussionSectionProps {
 export function VoiceDiscussionSection({ local, update }: VoiceDiscussionSectionProps): React.ReactElement {
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  // ---- 功能开关（缺省全部开启，保持既有行为）----
+  const orbEnabled = local.voiceOrbEnabled ?? true
+  const discussionEnabled = local.voiceDiscussionEnabled ?? true
+  const autoContinue = local.voiceDiscussionAutoContinue ?? true
+  const prompt = local.voiceDiscussionPrompt ?? ''
+  const maxTokens = local.voiceDiscussionMaxTokens ?? DEFAULT_DISCUSSION_MAX_TOKENS
+  const ttsVoice = local.edgeTtsVoice ?? 'zh-CN-XiaoxiaoNeural'
+
+  // ---- 面板外观 ----
   const style = local.voiceDiscussionStyle ?? 'default'
   const particleColor = local.voiceDiscussionParticleColor ?? ''
   const particleScale = local.voiceDiscussionParticleScale ?? 1.0
@@ -28,9 +45,113 @@ export function VoiceDiscussionSection({ local, update }: VoiceDiscussionSection
   const blur = local.voiceDiscussionBlur ?? 20
   const customCss = local.voiceDiscussionCustomCss ?? ''
 
+  const voices = sortVoicesZh(useTtsVoices())
+
   return (
     <div className="space-y-4">
-      <SectionTitle title="语音讨论面板" desc="自定义语音讨论弹窗的外观风格" />
+      <SectionTitle title="语音与讨论" desc="开关语音入口，并调整语音讨论的全部参数" />
+
+      {/* ── 功能开关 ── */}
+      <ToggleRow
+        icon={orbEnabled ? <Eye size={16} /> : <EyeOff size={16} />}
+        label="显示语音球"
+        desc="主界面右下角的悬浮语音入口"
+        active={orbEnabled}
+        onToggle={() => update({ voiceOrbEnabled: !orbEnabled })}
+        activeText="已显示，可拖拽定位与开合面板"
+        inactiveText="已隐藏，语音功能入口全部收回"
+      />
+      <ToggleRow
+        icon={<MessageCircle size={16} />}
+        label="语音讨论"
+        desc="回合制语音对话，结束后自动汇总为任务"
+        active={discussionEnabled}
+        onToggle={() => update({ voiceDiscussionEnabled: !discussionEnabled })}
+        activeText="已启用，语音球可发起讨论"
+        inactiveText="已关闭，面板内麦克风不可用"
+      />
+      <ToggleRow
+        icon={<InfinityIcon size={16} />}
+        label="自动接续"
+        desc="AI 说完后自动开始下一轮录音"
+        active={autoContinue}
+        onToggle={() => update({ voiceDiscussionAutoContinue: !autoContinue })}
+        activeText="已开启，连续对话无需手动点麦克风"
+        inactiveText="已关闭，每轮需手动点麦克风开始"
+      />
+
+      {/* ── 讨论行为 ── */}
+      <div className="space-y-4 rounded-card border border-border bg-bg-elevated-soft p-4">
+        {/* 音色 */}
+        <div>
+          <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-text-primary">
+            <Volume2 size={13} className="text-accent" />
+            朗读音色
+          </label>
+          <select
+            value={ttsVoice}
+            onChange={(e) => update({ edgeTtsVoice: e.target.value })}
+            className="w-full rounded-card border border-border bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-accent focus-ring"
+          >
+            {voices.length > 0 ? (
+              voices.map((v) => (
+                <option key={v.shortName} value={v.shortName}>
+                  {v.shortName.replace(/Neural$/, '')} ({v.gender})
+                </option>
+              ))
+            ) : (
+              <option value={ttsVoice}>{ttsVoice}</option>
+            )}
+          </select>
+          <p className="mt-1 text-caption text-text-muted">Edge TTS 音色，中文优先排列</p>
+        </div>
+
+        {/* 提示词 */}
+        <div>
+          <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-text-primary">
+            <span className="flex items-center gap-2">
+              <MessageCircle size={13} className="text-accent" />
+              讨论提示词
+            </span>
+            <button
+              onClick={() => update({ voiceDiscussionPrompt: '' })}
+              className="flex items-center gap-1 text-xs text-text-muted hover:text-accent transition-colors active:scale-[0.97]"
+            >
+              <RotateCcw size={12} />
+              用默认
+            </button>
+          </label>
+          <textarea
+            value={prompt}
+            onChange={(e) => update({ voiceDiscussionPrompt: e.target.value })}
+            placeholder={DEFAULT_DISCUSSION_PROMPT}
+            rows={4}
+            className="w-full rounded-card border border-border bg-bg-base px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:border-accent focus-ring resize-y"
+          />
+          <p className="mt-1 text-caption text-text-muted">留空使用内置提示词（极简口语化、不超过两句话）</p>
+        </div>
+
+        {/* 回复长度上限 */}
+        <div>
+          <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-text-primary">
+            <span className="flex items-center gap-2">
+              <Sliders size={13} className="text-accent" />
+              回复长度上限
+            </span>
+            <span className="text-xs text-text-muted">{maxTokens} token</span>
+          </label>
+          <input
+            type="range"
+            min={256}
+            max={8192}
+            step={256}
+            value={maxTokens}
+            onChange={(e) => update({ voiceDiscussionMaxTokens: parseInt(e.target.value) })}
+            className="w-full accent-accent"
+          />
+          <p className="mt-1 text-caption text-text-muted">语音讨论单次回复的最大长度，越长越啰嗦</p>
+        </div>
+      </div>
 
       {/* 样式选择 */}
       <div>
@@ -243,7 +364,9 @@ export function VoiceDiscussionSection({ local, update }: VoiceDiscussionSection
       {/* 预览提示 */}
       <div className="flex items-center gap-2 rounded-card bg-accent/5 px-3 py-2 text-xs text-text-secondary">
         <Mic size={13} className="text-accent" />
-        <span>点击主界面语音球即可预览当前设置效果</span>
+        <span>
+          {orbEnabled ? '设置即时生效，点击主界面语音球即可预览' : '语音球已隐藏，重新开启后即可在主界面预览'}
+        </span>
       </div>
     </div>
   )

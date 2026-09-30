@@ -6,6 +6,7 @@ import { cancelStream } from '../cancel-stream'
 import { buildUserMessage } from '../buildUserMessage'
 import { genId, makeTitle } from '../store-utils'
 import { getActiveCustomProvider } from '@renderer/lib/providers'
+import { buildHandoffTask } from '@renderer/lib/handoff'
 import type { SetState } from '../stream-persist'
 
 export type ChatSlice = Pick<StoreState,
@@ -19,6 +20,40 @@ export const createChatSlice: StateCreator<StoreState, [], [], ChatSlice> = (set
     const state = get()
     if (state.isStreaming) return
     if (!text.trim()) return
+
+    // /handoff — 工作交接：当前对话打包为后台实例任务，AI 同事接手（不走聊天管线）
+    if (options?.slashCommand?.cmd === '/handoff') {
+      const conv = state.getCurrentConversation()
+      if (!conv || conv.messages.length === 0) {
+        set({ error: '当前会话没有可交接的内容' })
+        return
+      }
+      const { task, messageCount } = buildHandoffTask(conv, text)
+      try {
+        const res = await window.api.agentSystem.startInstance({ task })
+        if (res.success && res.instance) {
+          const receipt: ChatMessage = {
+            id: genId(),
+            role: 'assistant',
+            content: `🤝 已将本对话近期 ${messageCount} 条消息转交后台 Agent 接手（「${res.instance.agentName}」）。\n在左侧栏「Agent 系统 → 实例」可查看进度，完成后结果会写回会话「[${conv.title}]」。`,
+            timestamp: Date.now()
+          }
+          set((s) => ({
+            conversations: s.conversations.map((c) =>
+              c.id === conv.id
+                ? { ...c, messages: [...c.messages, receipt], updatedAt: Date.now() }
+                : c
+            )
+          }))
+          void get()._persist()
+        } else {
+          set({ error: res.message ?? '转交失败' })
+        }
+      } catch (e) {
+        set({ error: (e as Error).message })
+      }
+      return
+    }
 
     // 消息构建 — 联网搜索提示、附加文件、组件选择、@file 引用
     const { text: processedText, clearAttachedFiles, clearSelectedComponents } = await buildUserMessage({

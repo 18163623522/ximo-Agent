@@ -55,6 +55,27 @@ async function getTranscriber(): Promise<PipelineFn> {
 }
 
 /**
+ * 释放已加载的 Whisper 模型 — 关闭语音功能时调用。
+ *
+ * 模型常驻会一直占着 ONNX 运行时与量化权重内存（数十 MB 级），
+ * 既然功能关了就该还回去；下次再用会从本地缓存重新加载（离线，秒级）。
+ */
+export async function releaseTranscriber(): Promise<boolean> {
+  const pipe = transcriber
+  transcriber = null
+  loadingPromise = null
+  if (!pipe) return false
+  try {
+    const disposable = pipe as unknown as { dispose?: () => Promise<void> | void }
+    if (typeof disposable.dispose === 'function') await disposable.dispose()
+    console.log('[stt-local] 已释放 Whisper 模型，回收内存')
+  } catch (e) {
+    console.warn('[stt-local] 释放模型时告警:', e instanceof Error ? e.message : String(e))
+  }
+  return true
+}
+
+/**
  * 本地语音转写 — 基于 Whisper 模型的纯离线推理。
  *
  * @param pcm 16kHz 单声道 PCM 音频数据（Float32Array）

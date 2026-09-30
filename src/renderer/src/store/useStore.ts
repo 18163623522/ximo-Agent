@@ -6,6 +6,7 @@ import type {
 import { createDesignSlice } from './slices/designSlice'
 import { normalizeAutoMode } from '@renderer/lib/auto-mode'
 import { createBrowserSlice } from './slices/browserSlice'
+import { createDesktopSlice } from './slices/desktopSlice'
 import { createSkillsSlice } from './slices/skillsSlice'
 import { createAgentSlice } from './slices/agentSlice'
 import { createConversationSlice } from './slices/conversationSlice'
@@ -24,6 +25,7 @@ export const useStore = create<StoreState>()((...args) => {
   ...createChatSlice(...args),
   ...createDesignSlice(...args),
   ...createBrowserSlice(...args),
+  ...createDesktopSlice(...args),
   ...createSkillsSlice(...args),
   ...createAgentSlice(...args),
 
@@ -48,6 +50,14 @@ export const useStore = create<StoreState>()((...args) => {
   autoModeLevel: 'off',
   attachedFiles: [],
   pastedImagePaths: [],
+
+  // ---- 虚拟桌面 ----
+  desktopOpen: false,
+  desktopList: [],
+  desktopWindows: [],
+  desktopActiveId: '',
+  desktopLoading: false,
+  desktopError: null,
 
   _persist: async () => {
     await window.api.conversations.save(get().conversations)

@@ -66,7 +66,7 @@ export function OfficeFilePanel(): React.ReactElement {
         </div>
         <div className="flex-1 min-h-0 overflow-auto px-3 py-2">
           {preview.error
-            ? <p className="text-caption text-red-400">{preview.error}</p>
+            ? <p className="text-caption text-state-error">{preview.error}</p>
             : <pre className="whitespace-pre-wrap break-all font-mono text-caption leading-relaxed text-text-secondary">{preview.content}</pre>}
         </div>
       </div>
@@ -83,7 +83,7 @@ export function OfficeFilePanel(): React.ReactElement {
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-1.5 py-2">
         {!projectPath && <p className="px-2 py-1.5 text-caption text-text-muted">先在左侧栏绑定项目目录，再回来浏览文件。</p>}
-        {error && <p className="px-2 py-1.5 text-caption text-red-400">{error}</p>}
+        {error && <p className="px-2 py-1.5 text-caption text-state-error">{error}</p>}
         {projectPath && !tree && !error && (
           <div className="flex items-center gap-1.5 px-2 py-1.5 text-caption text-text-muted">
             <Loader2 size={11} className="animate-spin" />读取目录…

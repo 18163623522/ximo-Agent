@@ -138,7 +138,7 @@ export const TodoListView = memo(function TodoListView({ todos }: { todos: Agent
 /** 单个任务行 */
 const TodoRow = memo(function TodoRow({ todo, isPhase = false }: { todo: AgentTodo; isPhase?: boolean }): React.ReactElement {
   const icon = todo.status === 'completed'
-    ? <Check size={13} className="text-green-400" />
+    ? <Check size={13} className="text-state-success" />
     : todo.status === 'in_progress'
       ? <Loader2 size={13} className="animate-spin text-accent" />
       : <Circle size={11} className="text-text-tertiary" />

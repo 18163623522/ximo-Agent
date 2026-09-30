@@ -113,7 +113,7 @@ function ExpertNodeCard({ node, depth }: { node: ExpertNode; depth: number }): R
               <div className="space-y-1 pt-1">
                 {rows.map((r, i) => (
                   <div key={i} className="flex items-start gap-1.5 text-caption">
-                    <Wrench size={11} className="mt-0.5 shrink-0 text-amber-400/80" />
+                    <Wrench size={11} className="mt-0.5 shrink-0 text-state-warning/80" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-text-secondary">{r.name || '工具调用'}</p>
                       {r.args && <p className="truncate text-text-tertiary">{r.args}</p>}
@@ -126,7 +126,7 @@ function ExpertNodeCard({ node, depth }: { node: ExpertNode; depth: number }): R
             {/* 最终结果 */}
             {finishedEvent?.result && (
               <div className="rounded-card bg-bg-surface-soft px-2 py-1.5 text-caption leading-relaxed text-text-secondary">
-                <p className="mb-0.5 flex items-center gap-1 text-green-500">
+                <p className="mb-0.5 flex items-center gap-1 text-state-success">
                   <CheckCircle2 size={11} /> 最终结果
                 </p>
                 <p className="line-clamp-4 break-words whitespace-pre-wrap">{finishedEvent.result.slice(0, 600)}</p>

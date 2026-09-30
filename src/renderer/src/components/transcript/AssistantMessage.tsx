@@ -67,6 +67,15 @@ export const AssistantMessage = memo(function AssistantMessage({
 
   return (
     <div className={`msg msg--assistant${hasReasoning && !hasText ? ' msg--process-only' : ''}${hasReasoning && hasText ? ' msg--process-with-text' : ''}`}>
+      {/* 署名行 — Quiet Precision 签名件：小圆点 + 身份 + 模型短名。
+          给无气泡的排版式回复一个"谁在说话"的锚点；model 可选，缺失时只显示身份。 */}
+      {(hasText || hasReasoning || isWaitingFirstToken) && (
+        <div className="msg-byline">
+          <span className="msg-byline__dot" aria-hidden />
+          <span className="msg-byline__name">ximo</span>
+          {shown.model && <span className="msg-byline__model">{shown.model}</span>}
+        </div>
+      )}
       {hasReasoning && (
         <ReasoningPanel
           reasoning={shown.reasoning}

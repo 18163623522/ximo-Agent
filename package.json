@@ -1,16 +1,17 @@
 {
   "name": "ximo-agent",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "DeepSeek-V4 驱动的全能 Agent 工作台 - 办公/编程/设计三模式",
   "author": "ximo",
   "main": "out/main/index.js",
   "type": "module",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/dev.mjs dev",
     "build": "electron-vite build",
-    "start": "electron-vite preview",
-    "preview": "electron-vite preview",
+    "start": "node scripts/dev.mjs preview",
+    "preview": "node scripts/dev.mjs preview",
     "build:win": "electron-vite build && electron-builder --win",
+    "icons:thin": "node scripts/gen-thin-icons.mjs",
     "make-icon": "node scripts/make-icon.mjs",
     "gen-previews": "node scripts/gen-previews.mjs",
     "download-whisper": "node scripts/download-whisper.mjs",
@@ -42,6 +43,8 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
@@ -52,6 +55,7 @@
     "electron": "^33.3.1",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "jsdom": "^30.1.1",
     "postcss": "^8.4.49",
     "sharp": "^0.35.3",
     "tailwindcss": "^3.4.17",

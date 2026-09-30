@@ -255,7 +255,7 @@ export function SettingsModal(): React.ReactElement | null {
           </button>
           <div className="flex items-center gap-2">
             {hasChanges && (
-              <span className="text-xs text-amber-400/80 animate-pulse-dot">有未保存的更改</span>
+              <span className="text-xs text-state-warning/80 animate-pulse-dot">有未保存的更改</span>
             )}
             <button
               onClick={() => setShowSettings(false)}

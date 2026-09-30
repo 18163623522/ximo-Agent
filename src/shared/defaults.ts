@@ -119,5 +119,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   burstParticleCount: 120,
   burstDuration: 2500,
   burstColorTheme: 'rose',
-  customTransitionAnimation: undefined
+  customTransitionAnimation: undefined,
+
+  // ---- 工作分摊（Agent 感知用户电脑操作）— 隐私敏感，默认关闭 ----
+  assistWatchEnabled: false
 }

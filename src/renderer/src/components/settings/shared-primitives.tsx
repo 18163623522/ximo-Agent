@@ -74,9 +74,9 @@ export function DataRow({
   return (
     <div className="ios-card flex items-center justify-between p-3">
       <div className="flex items-start gap-2">
-        <span className={danger ? 'text-red-400' : 'text-text-muted'}>{icon}</span>
+        <span className={danger ? 'text-state-error' : 'text-text-muted'}>{icon}</span>
         <div>
-          <p className={`text-sm font-medium ${danger ? 'text-red-400' : 'text-text-primary'}`}>
+          <p className={`text-sm font-medium ${danger ? 'text-state-error' : 'text-text-primary'}`}>
             {title}
           </p>
           <p className="text-xs text-text-muted">{desc}</p>

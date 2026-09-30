@@ -101,7 +101,7 @@ export function FileEditorPanel({ filePath, onBack, onSaved }: FileEditorPanelPr
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {hasChanges && (
-            <span className="text-caption text-amber-400">未保存</span>
+            <span className="text-caption text-state-warning">未保存</span>
           )}
           {!isBinary && (
             <button aria-label="保存 (Ctrl+S)"
@@ -131,7 +131,7 @@ export function FileEditorPanel({ filePath, onBack, onSaved }: FileEditorPanelPr
         ) : error ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-state-error">{error}</p>
               <button onClick={loadFile} className="btn-ghost mt-3 rounded-card px-3 py-1.5 text-xs">重试</button>
             </div>
           </div>

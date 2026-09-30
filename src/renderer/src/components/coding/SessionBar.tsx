@@ -108,7 +108,7 @@ export function SessionBar({
                   >
                     <GitBranch size={11} />
                     {b}
-                    {b === gitBranch && <span className="ml-auto text-green-500">✓</span>}
+                    {b === gitBranch && <span className="ml-auto text-state-success">✓</span>}
                   </button>
                 ))}
               </div>
@@ -122,7 +122,7 @@ export function SessionBar({
         {onRunProject && projectPath && (
           <button aria-label="一键运行项目"
             onClick={onRunProject}
-            className="chip flex items-center gap-1 px-2 py-0.5 text-caption text-green-400 hover:border-green-500/40 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter]"
+            className="chip flex items-center gap-1 px-2 py-0.5 text-caption text-state-success hover:border-state-success/40 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter]"
             title="一键运行项目"
           >
             <Play size={11} />

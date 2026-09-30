@@ -25,6 +25,7 @@ export const SLASH_COMMANDS_BY_MODE: Record<string, Array<{ cmd: string; label: 
     { cmd: '/doc', label: '生成文档', systemHint: '请帮我生成一份专业文档。\n\n文档类型：[报告/方案/纪要/说明书]\n主题：[请填写]\n受众：[请填写]' },
     { cmd: '/ppt', label: '生成 PPT', systemHint: '请帮我生成一份PPT大纲和内容。主题：[请填写主题]' },
     { cmd: '/summary', label: '任务摘要', systemHint: '请帮我总结当前任务的进展，包括已完成的工作、待解决的问题和下一步计划。' },
+    { cmd: '/handoff', label: '转交后台 Agent（AI 同事接手）', systemHint: '' },
     { cmd: '/translate', label: '翻译', systemHint: '请将以下内容翻译为目标语言（默认英文），保持专业性和流畅性：\n\n' },
     { cmd: '/record', label: '录制技能', systemHint: '请使用 skill_record 工具开始录制技能。先用浏览器导航到目标页面，然后执行操作序列，最后停止录制并生成技能。\n\n调用 skill_record(action="start") 开始，完成后调用 skill_record(action="stop", name="技能名", description="描述") 结束。' },
     { cmd: '/skill', label: '调用技能', systemHint: '请使用 skill_record(action="status") 查看已有的技能列表，然后根据我的任务需求调用最匹配的技能。' },

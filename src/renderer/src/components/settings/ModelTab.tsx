@@ -75,7 +75,7 @@ export function ModelTab({
       />
 
       {!reasoningCapable && (
-        <p className="text-xs text-amber-400/70">
+        <p className="text-xs text-state-warning/70">
           当前活跃服务商不支持 reasoning 参数，思考模式与思考强度将在发送时自动关闭
         </p>
       )}
@@ -143,7 +143,7 @@ export function ModelTab({
           <span>发散 (2.0)</span>
         </div>
         {local.thinkingMode && (
-          <p className="mt-1.5 text-xs text-amber-400/70">
+          <p className="mt-1.5 text-xs text-state-warning/70">
             思考模式下温度参数不生效（由模型自主控制推理强度）
           </p>
         )}

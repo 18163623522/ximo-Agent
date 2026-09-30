@@ -247,7 +247,7 @@ export const MessageItem = memo(function MessageItem({
         {!isStreaming && content && (
           <div className="mt-2 flex items-center gap-1">
             <button onClick={handleCopy} className="icon-btn flex items-center gap-1 rounded-card px-2 py-1 text-xs">
-              {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+              {copied ? <Check size={13} className="text-state-success" /> : <Copy size={13} />}
               {copied ? '已复制' : '复制'}
             </button>
             {canRegenerate && onRegenerate && (

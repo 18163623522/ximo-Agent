@@ -131,7 +131,7 @@ export function AutoModeSelect({
                   size={13}
                   className={`mt-0.5 shrink-0 ${
                     opt.tone === 'danger'
-                      ? 'text-red-400'
+                      ? 'text-state-error'
                       : selected
                         ? 'text-accent'
                         : 'text-text-muted'

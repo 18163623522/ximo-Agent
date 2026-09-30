@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Plus, Globe, Terminal, FolderOpen, LayoutDashboard, X } from 'lucide-react'
+import { Plus, Globe, Terminal, FolderOpen, LayoutDashboard, Monitor, X } from 'lucide-react'
 import { useStore } from '@renderer/store/useStore'
 import { OfficeOverviewPanel } from './OfficeOverviewPanel'
 import { SpinnerBlock } from '@renderer/components/shared/Spinner'
@@ -8,6 +8,7 @@ import { SpinnerBlock } from '@renderer/components/shared/Spinner'
 const EmbeddedBrowserPanel = lazy(() => import('./EmbeddedBrowserPanel').then(m => ({ default: m.EmbeddedBrowserPanel })))
 const OfficeTerminalPanel = lazy(() => import('./OfficeTerminalPanel').then(m => ({ default: m.OfficeTerminalPanel })))
 const OfficeFilePanel = lazy(() => import('./OfficeFilePanel').then(m => ({ default: m.OfficeFilePanel })))
+const AgentWorkspacePanel = lazy(() => import('@renderer/components/desktop/AgentWorkspacePanel').then(m => ({ default: m.AgentWorkspacePanel })))
 
 interface PanelDef {
   id: string
@@ -16,11 +17,12 @@ interface PanelDef {
   hint: string
 }
 
-/** 「+」可新建的面板 — 三者都走真实通道 */
+/** 「+」可新建的面板 — 四者都走真实通道 */
 const PANEL_DEFS: PanelDef[] = [
   { id: 'browser', label: '浏览器', icon: Globe, hint: '浏览及调试网页' },
   { id: 'terminal', label: '终端', icon: Terminal, hint: '执行命令及脚本' },
   { id: 'file', label: '文件', icon: FolderOpen, hint: '浏览和预览任务文件' },
+  { id: 'desktop', label: 'Agent 桌面', icon: Monitor, hint: 'WSL 隔离 Linux 桌面' },
 ]
 
 const TAB_META: Record<string, { label: string; icon: LucideIcon }> = {
@@ -41,16 +43,19 @@ export function ContextRightPanel({ hasConversation: _hasConversation }: { hasCo
   const panelTabs = useStore((s) => s.officePanelTabs)
   const panelActive = useStore((s) => s.officePanelActive)
   const browserOpen = useStore((s) => s.browserOpen)
+  const desktopOpen = useStore((s) => s.desktopOpen)
   const openPanel = useStore((s) => s.openOfficePanel)
   const closePanel = useStore((s) => s.closeOfficePanel)
   const setActive = useStore((s) => s.setOfficePanelActive)
+  const toggleDesktop = useStore((s) => s.toggleDesktop)
   const [menuOpen, setMenuOpen] = useState(false)
 
   const tabs = useMemo(() => {
-    const list = ['overview', ...panelTabs.filter((t) => t !== 'browser')]
+    const list = ['overview', ...panelTabs.filter((t) => t !== 'browser' && t !== 'desktop')]
     if (browserOpen) list.push('browser')
+    if (desktopOpen) list.push('desktop')
     return list
-  }, [panelTabs, browserOpen])
+  }, [panelTabs, browserOpen, desktopOpen])
 
   // 当前 tab 被关掉时回落到概览
   const active = tabs.includes(panelActive) ? panelActive : 'overview'
@@ -60,6 +65,20 @@ export function ContextRightPanel({ hasConversation: _hasConversation }: { hasCo
   useEffect(() => {
     if (browserOpen) setActive('browser')
   }, [browserOpen, setActive])
+
+  // 虚拟桌面开启时自动切到桌面 tab
+  useEffect(() => {
+    if (desktopOpen) setActive('desktop')
+  }, [desktopOpen, setActive])
+
+  // 「+」菜单中点击 desktop 时调用 toggleDesktop 而非 openPanel
+  const handleOpenPanel = (id: string): void => {
+    if (id === 'desktop') {
+      toggleDesktop()
+    } else {
+      openPanel(id)
+    }
+  }
 
   return (
     <aside className="flex h-full w-full flex-col border-l border-border-subtle glass">
@@ -85,7 +104,7 @@ export function ContextRightPanel({ hasConversation: _hasConversation }: { hasCo
                   return (
                     <button
                       key={def.id}
-                      onClick={() => { openPanel(def.id); setMenuOpen(false) }}
+                      onClick={() => { handleOpenPanel(def.id); setMenuOpen(false) }}
                       className="flex w-full items-center gap-2 rounded-card px-2 py-2 text-left transition-colors hover:bg-bg-hover active:scale-[0.97]"
                     >
                       <DefIcon size={13} className="shrink-0 text-text-muted" />
@@ -120,7 +139,10 @@ export function ContextRightPanel({ hasConversation: _hasConversation }: { hasCo
                   </button>
                   {id !== 'overview' && (
                     <button
-                      onClick={() => closePanel(id)}
+                      onClick={() => {
+                        if (id === 'desktop') toggleDesktop()
+                        else closePanel(id)
+                      }}
                       className="py-1 pl-0.5 pr-1.5 opacity-0 transition-opacity group-hover:opacity-100 active:scale-[0.97]"
                       title={`关闭${meta.label}`}
                     >
@@ -145,6 +167,9 @@ export function ContextRightPanel({ hasConversation: _hasConversation }: { hasCo
         )}
         {active === 'file' && (
           <Suspense fallback={<PanelSpinner />}><OfficeFilePanel /></Suspense>
+        )}
+        {active === 'desktop' && (
+          <Suspense fallback={<PanelSpinner />}><AgentWorkspacePanel /></Suspense>
         )}
       </div>
     </aside>

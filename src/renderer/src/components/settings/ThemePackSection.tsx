@@ -96,7 +96,7 @@ export function ThemePackSection({
       </div>
 
       {error && (
-        <div className="mt-2 flex items-center gap-2 rounded-card bg-red-500/10 p-2 text-caption text-red-400">
+        <div className="mt-2 flex items-center gap-2 rounded-card bg-state-error/10 p-2 text-caption text-state-error">
           <AlertCircle size={13} /> {error}
         </div>
       )}
@@ -171,7 +171,7 @@ export function ThemePackSection({
                     </button>
                     <button
                       onClick={() => void handleDelete(pack.id)}
-                      className="rounded-control p-1 text-text-muted opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:text-red-400 group-hover:opacity-100 active:scale-[0.97]"
+                      className="rounded-control p-1 text-text-muted opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:text-state-error group-hover:opacity-100 active:scale-[0.97]"
                       title="删除"
                     >
                       <Trash2 size={13} />

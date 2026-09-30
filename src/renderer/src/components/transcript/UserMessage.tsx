@@ -140,7 +140,7 @@ export const UserMessage = memo(function UserMessage({
         <div className="msg-meta">
           {timeStr && <time className="msg-meta__time">{timeStr}</time>}
           <button aria-label="复制" className="msg-meta__btn" type="button" onClick={handleCopy} title="复制">
-            {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+            {copied ? <Check size={13} className="text-state-success" /> : <Copy size={13} />}
           </button>
           {onEdit && (
             <button aria-label="编辑"

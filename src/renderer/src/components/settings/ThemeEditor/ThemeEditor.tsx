@@ -246,7 +246,7 @@ export function ThemeEditor({
       <div className="mt-2 flex items-center justify-between border-t border-border-subtle pt-2">
         <button
           onClick={handleResetAll}
-          className="flex items-center gap-1 rounded-control px-2 py-1 text-caption text-text-muted transition-colors hover:text-red-400 active:scale-[0.97]"
+          className="flex items-center gap-1 rounded-control px-2 py-1 text-caption text-text-muted transition-colors hover:text-state-error active:scale-[0.97]"
         >
           <RotateCcw size={13} /> 全部重置
         </button>

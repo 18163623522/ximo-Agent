@@ -109,16 +109,16 @@ export function SessionTokenStats({ conversation }: Props): React.ReactElement |
       <span className="text-text-quaternary">|</span>
       {/* 缓存命中 */}
       <div className="flex items-center gap-1">
-        <Database size={11} className="text-emerald-500/70" />
+        <Database size={11} className="text-state-success/70" />
         <span className="text-text-muted">缓存命中</span>
-        <span className="font-mono text-emerald-500/80">{cacheHitTokens > 0 ? cacheHitTokens.toLocaleString() : '—'}</span>
+        <span className="font-mono text-state-success/80">{cacheHitTokens > 0 ? cacheHitTokens.toLocaleString() : '—'}</span>
       </div>
       <span className="text-text-quaternary">|</span>
       {/* 命中率 — D1 聚合公式 */}
       <div className="flex items-center gap-1" title={totalCacheDenom > 0 ? '聚合命中率 = Σhit / Σ(hit+miss)，不随压缩重置' : undefined}>
-        <TrendingUp size={11} className={hitRate > 50 ? 'text-emerald-500/70' : 'text-amber-500/70'} />
+        <TrendingUp size={11} className={hitRate > 50 ? 'text-state-success/70' : 'text-state-warning/70'} />
         <span className="text-text-muted">命中率</span>
-        <span className={`font-mono ${hitRate > 50 ? 'text-emerald-500/80' : 'text-amber-500/80'}`}>
+        <span className={`font-mono ${hitRate > 50 ? 'text-state-success/80' : 'text-state-warning/80'}`}>
           {(totalCacheDenom > 0 || promptTokens > 0) ? `${hitRate.toFixed(1)}%` : '—'}
         </span>
       </div>

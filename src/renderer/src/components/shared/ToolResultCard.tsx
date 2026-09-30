@@ -14,7 +14,7 @@ interface ToolResultCardProps {
 export function ToolResultCard({ result }: ToolResultCardProps): React.ReactElement {
   if (!result.success) {
     return (
-      <div className="my-2 rounded-panel border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400 backdrop-blur-sm">
+      <div className="my-2 rounded-panel border border-state-error/20 bg-state-error/5 px-3 py-2 text-xs text-state-error backdrop-blur-sm">
         ⚠ {result.error || result.content}
       </div>
     )
@@ -25,7 +25,7 @@ export function ToolResultCard({ result }: ToolResultCardProps): React.ReactElem
     <div className="my-2 overflow-hidden rounded-panel border border-border-subtle ios-card">
       <div className="flex items-center justify-between border-b border-border-subtle bg-bg-surface-soft px-3 py-1.5">
           <span className="text-caption text-text-muted">{result.toolName} — 截图</span>
-          <span className="text-caption text-green-500">✓ 完成</span>
+          <span className="text-caption text-state-success">✓ 完成</span>
         </div>
         <img src={result.screenshot} alt="工具执行截图" className="w-full" />
       </div>
@@ -63,7 +63,7 @@ export function ToolResultCard({ result }: ToolResultCardProps): React.ReactElem
         <div className="my-2 overflow-hidden rounded-panel border border-border-subtle ios-card">
           <div className="flex items-center justify-between border-b border-border-subtle bg-bg-surface-soft px-3 py-1.5">
             <span className="text-caption text-text-muted">{result.toolName}</span>
-            <span className="text-caption text-green-500">✓ 完成</span>
+            <span className="text-caption text-state-success">✓ 完成</span>
           </div>
           <CodeBlock language={(result.metadata?.language as string) || 'text'} value={result.content} />
         </div>
@@ -74,7 +74,7 @@ export function ToolResultCard({ result }: ToolResultCardProps): React.ReactElem
           <div className="mb-2 flex items-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <span className="text-caption font-medium text-text-secondary">搜索结果</span>
-            <span className="ml-auto text-caption text-green-500">✓</span>
+            <span className="ml-auto text-caption text-state-success">✓</span>
           </div>
           {/* 尝试解析结构化搜索结果 */}
           {result.metadata?.results && Array.isArray(result.metadata.results) ? (

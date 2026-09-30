@@ -74,5 +74,5 @@ export function autoModeOption(value: unknown): AutoModeOption {
 export const AUTO_MODE_TRIGGER_TONE: Record<AutoModeOption['tone'], string> = {
   neutral: 'text-text-muted hover:text-text-secondary',
   accent: 'border-accent/30 text-accent bg-accent/10',
-  danger: 'border-red-500/30 text-red-400 bg-red-500/10'
+  danger: 'border-state-error/30 text-state-error bg-state-error/10'
 }

@@ -1,11 +1,12 @@
-import { useState, useMemo, useRef } from 'react'
-import { Plus, Users, Brain, Library, Server, Puzzle, RefreshCw, BarChart3, Settings, Folder } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { Plus, Users, Brain, Library, Server, Puzzle, RefreshCw, BarChart3, Settings, Folder, Monitor } from 'lucide-react'
 import { useStore } from '@renderer/store/useStore'
 import { MODE_CONFIGS } from '@renderer/modes'
 import { ProjectGroup } from './sidebar/ProjectGroup'
 import { ConversationItem } from './sidebar/ConversationItem'
 import { SidebarNavItem } from './sidebar/SidebarNavItem'
 import { useSidebarNavCounts } from './sidebar/useSidebarNavCounts'
+import { Kbd } from '@renderer/components/shared/Kbd'
 
 export function Sidebar(): React.ReactElement {
   const allConversations = useStore((s) => s.conversations)
@@ -80,6 +81,30 @@ export function Sidebar(): React.ReactElement {
     useStore.getState().setShowSkillPanel(true)
   }
 
+  const handleAgentSystem = (): void => {
+    useStore.getState().setShowAgentSystemPanel(true)
+  }
+
+  // Agent 系统状态徽标 — 运行中实例数 / 未读完成结果（打开面板即计为已读）
+  const [agentSystemBadge, setAgentSystemBadge] = useState({ running: 0, unread: 0 })
+  const loadAgentSystemStatus = useCallback(async (): Promise<void> => {
+    try {
+      const res = await window.api.agentSystem.listInstances()
+      if (!res.success) return
+      const lastSeen = Number(localStorage.getItem('ximo-agent-system-last-seen') ?? 0)
+      setAgentSystemBadge({
+        running: res.instances.filter((i) => i.status === 'running' || i.status === 'queued').length,
+        unread: res.instances.filter((i) => i.status !== 'running' && i.status !== 'queued' && (i.finishedAt ?? 0) > lastSeen).length,
+      })
+    } catch { /* 静默 */ }
+  }, [])
+  useEffect(() => {
+    void loadAgentSystemStatus()
+    const off = window.api.agentSystem.onInstancesUpdated(() => { void loadAgentSystemStatus() })
+    const timer = setInterval(() => { void loadAgentSystemStatus() }, 15_000)
+    return () => { off(); clearInterval(timer) }
+  }, [loadAgentSystemStatus])
+
   // coding/design 模式：按 projectPath 分组
   const projectGroups = useMemo(() => {
     if (!isProjectMode) return []
@@ -102,15 +127,18 @@ export function Sidebar(): React.ReactElement {
   }, [conversations, isProjectMode])
 
   return (
-    <aside className="flex h-full w-full flex-col border-r border-border-subtle glass">
-      {/* 主操作 */}
+    <aside className="flex h-full w-full flex-col border-r border-border-subtle glass-bar">
+      {/* 主操作 — 主按钮带 kbd 徽标（Linear 式签名：动作与快捷键同框） */}
       <div className="px-3 pt-3 pb-2">
         <button
           onClick={handleNew}
-          className="btn-liquid flex w-full items-center justify-center gap-1.5 rounded-panel px-2 py-2 text-xs font-semibold"
+          className="btn-liquid flex w-full items-center justify-between rounded-panel px-3 py-2 text-xs font-semibold"
         >
-          <Plus size={13} strokeWidth={2} />
-          {isProjectMode ? '打开项目' : '新建任务'}
+          <span className="flex items-center gap-1.5">
+            <Plus size={13} />
+            {isProjectMode ? '打开项目' : '新建任务'}
+          </span>
+          {!isProjectMode && <Kbd onFill>Ctrl+N</Kbd>}
         </button>
       </div>
 
@@ -170,6 +198,20 @@ export function Sidebar(): React.ReactElement {
               : `导入 ${counts.skillImported ?? 0} 个 · 录制 ${counts.skillRecorded ?? 0} 个`
           }
         />
+        <SidebarNavItem
+          icon={Monitor}
+          label="Agent 系统"
+          onClick={handleAgentSystem}
+          badge={
+            agentSystemBadge.running > 0
+              ? `运行中 ${agentSystemBadge.running}`
+              : agentSystemBadge.unread > 0
+                ? `未读 ${agentSystemBadge.unread}`
+                : undefined
+          }
+          tone={agentSystemBadge.running > 0 ? 'accent' : agentSystemBadge.unread > 0 ? 'warn' : 'default'}
+          title="Agent 实例 / 定时任务 / Agent 定义管理 — 聊天框用 @Agent系统桌面 下达任务"
+        />
       </div>
 
       {/* 列表标题 */}
@@ -218,7 +260,7 @@ export function Sidebar(): React.ReactElement {
             {projectGroups.length === 0 && (
               <div className="mt-8 flex flex-col items-center gap-3 px-4 text-center animate-fade-scale">
                 <div className="flex h-12 w-12 items-center justify-center rounded-panel bg-accent/10 text-accent shadow-glow edge-light">
-                  <Folder size={20} strokeWidth={2} />
+                  <Folder size={20} />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-text-secondary">还没有项目</p>
@@ -250,7 +292,7 @@ export function Sidebar(): React.ReactElement {
             {conversations.length === 0 && (
               <div className="mt-8 flex flex-col items-center gap-3 px-4 text-center animate-fade-scale">
                 <div className="flex h-12 w-12 items-center justify-center rounded-panel bg-accent/10 text-accent shadow-glow edge-light">
-                  <Plus size={20} strokeWidth={2} />
+                  <Plus size={20} />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-text-secondary">还没有任务</p>

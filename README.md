@@ -8,9 +8,11 @@
 
 ## 目录
 
+- [界面预览](#界面预览)
 - [安装](#安装)
 - [快速开始](#快速开始)
 - [三模式工作台](#三模式工作台)
+- [Agent 系统与定时任务](#agent-系统与定时任务)
 - [核心功能](#核心功能)
 - [工具系统详解](#工具系统详解)
 - [AI 引擎与上下文管理](#ai-引擎与上下文管理)
@@ -29,6 +31,28 @@
 - [开发命令](#开发命令)
 - [扩展点](#扩展点)
 - [配置与约定](#配置与约定)
+
+---
+
+## 界面预览
+
+### 办公模式 · 浅色主题
+
+![办公模式浅色主题：三模式顶栏切换、左侧任务与能力导航、推理档位标尺](docs/images/office-light.png)
+
+顶部 `Work / +Code / Design` 三模式一键切换（`Ctrl+1/2/3`）；左侧栏分「上下文 / 能力 / 办公模式·任务」三组，记忆、知识库、专家库、MCP 服务器、技能数量实时显示徽标；输入框集成附件、@提及、专家、标准、联网、自动审批等芯片，右侧「推理」标尺支持 **关闭 / 低 / 中 / 高 / 超高** 五档拖动调节。
+
+### 办公模式 · 深色主题与自定义背景
+
+![办公模式深色主题：暗色玻璃拟态界面与自定义背景图](docs/images/office-dark.png)
+
+同一套界面在深色模式下自动切换为玻璃拟态（backdrop-blur + 半透明分层），支持导入任意图片/视频作为全局背景，配合可调的不透明度、模糊半径与缩放模式；主题变量、强调色、圆角、阴影、动效均可在设置面板的主题编辑器中实时调整，无需重启。
+
+### Agent 桌面（WSL 隔离环境）
+
+![Agent 桌面：右侧面板内实时显示 WSL 中的 Linux 图形桌面与启动日志](docs/images/agent-desktop.png)
+
+右侧「概览 / Agent 桌面」标签页内嵌实时桌面画面：Agent 在 **WSL2 + Xvfb** 构建的隔离 Linux 桌面中自主操作（xdotool 点击输入、import 截屏、ffmpeg 画面流），底部滚动显示启动与状态日志，可在专用输入框单独「给桌面 Agent 下达任务」，与主会话互不干扰。默认分辨率 1280x800，桌面假死自动重启重试。
 
 ---
 
@@ -60,6 +84,8 @@
 - **浏览器自动化**：Playwright 驱动的完整浏览器操控
 - **桌面操控**：pi-computer-use 桥接，可操控电脑 UI
 - **Office 文档**：OfficeCLI 驱动的 Word/Excel/PowerPoint 读改（`office_docs`）
+- **虚拟桌面**：`virtual_desktop` 按 Windows 虚拟桌面分组管理窗口，Agent 可在独立桌面空间中工作，不打扰用户当前桌面
+- **Agent 桌面**：`wsl_desktop` 在 WSL2 + Xvfb 的隔离 Linux 桌面中操作，画面实时投射到右侧面板（见 [Agent 桌面](#agent-桌面wsl-隔离环境)）
 - **技能录制**：rrweb 录制操作序列，沉淀为可复用技能
 - **AI 专家库**：254 位专家按需激活
 - **网络抓包**：API 抽取、JS Hook、Storage 检查
@@ -89,6 +115,37 @@
 
 ---
 
+## Agent 系统与定时任务
+
+除交互式会话外，应用支持**后台自主 Agent**：把可复用的工作定义成「Agent」，由计划或事件自动触发执行。
+
+### Agent 定义与实例
+
+- **定义库**：每个 Agent 是一份可复用的角色配置（名称、系统提示词、可用工具集、模型与推理档位），并带两个独立开关：
+  - `useDesktop` — 是否在 Agent 桌面（WSL 隔离环境）中执行
+  - `autoApprove` — 是否免逐条确认（仍受权限引擎的 deny 规则约束）
+- **实例执行**：复用主链路的工具调用循环（无头模式），并发上限 3；使用桌面的实例进入**互斥队列**，避免争抢同一桌面
+- **结果回流**：执行结果写回会话记录并弹出系统通知，侧边栏「Agent 系统」入口以徽标显示 *运行中实例数 / 未读完成数*（15 秒轮询 + 事件推送），打开面板即计为已读
+- **Webhook 触发**：内置 HTTP 服务（默认 `17888` 端口）接收外部事件派活，便于与 CI、消息机器人等外部系统串联
+
+### 定时调度
+
+`ScheduleStore` 支持三种计划：**固定间隔**（interval）、**每日**（daily）、**每周**（weekly）。
+
+- 主进程 30 秒 tick 扫描到期任务，到点直接派发对应 Agent 实例
+- **错过补跑**：应用关闭期间错过的计划会在启动后补执行一次
+- 支持全局暂停/恢复，单条计划可独立启停
+
+### 对话交接（/handoff）
+
+在会话中输入 `/handoff`，可把当前对话上下文打包成任务，交给后台 Agent 实例继续处理——适合「先聊清楚要求，再让它在后台跑完」的场景。
+
+### 主动分担（AssistWatcher）
+
+默认**关闭**的可选感知器。开启后每 10 分钟采集一次窗口标题与画面文本大纲（**不截图、不落盘**），由模型判断是否存在可分担的工作，命中后弹出提案对话框征求同意，用户确认才派发执行。采用 fail-closed 设计（判定异常即不提案），并对相同提案做 30 分钟签名去重，避免重复打扰。
+
+---
+
 ## 核心功能
 
 ### Agent Loop（工具调用循环）
@@ -96,8 +153,8 @@
 - **思考 → 工具调用 → 观察 → 思考 → ... → 最终回答**
 - 支持最多 30 轮连续工具调用（可配置）
 - 每轮可并行调用多个工具
-- 支持 `off` / `high` / `max` / `ultra` 四级思考强度
-- `ultra` 模式下启用独立监督 Agent 审查输出质量
+- 支持 `off` / `low` / `high` / `max` / `ultra` 五档推理强度（界面标尺显示为 **关闭 / 低 / 中 / 高 / 超高**，可拖动切换）
+- `ultra`（超高）模式下启用独立监督 Agent 审查输出质量
 - **规划阶段**：复杂任务先跑一次规划（`planning-phase.ts` 分析需求、筛选工具），再进入主循环
 
 ### 上下文管理
@@ -143,6 +200,7 @@
 | `Ctrl+2` | 编程模式 |
 | `Ctrl+3` | 设计模式 |
 | `Ctrl+,` | 打开设置 |
+| `Ctrl+B` | 收起 / 展开右侧栏 |
 | `Ctrl+Shift+R` | 重新生成回复 |
 | `Escape` | 关闭弹窗 |
 
@@ -159,6 +217,8 @@
 | **WebIntelligence** | `web_search`、`web_fetch`、`web_cache`、`web_research` | 办公/编程/设计 |
 | **Browser** | `browser_navigate`、`browser_click`、`browser_type`、`browser_screenshot`、`browser_get_content`、`browser_execute_js`、`browser_network_monitor` | 办公 |
 | **ComputerUse** | `computer_use`、`find_roots`、`observe_ui`、`search_ui`、`act_ui`、`read_text`、`wait_for` | 办公 |
+| **VirtualDesktop** | `virtual_desktop`（Windows 虚拟桌面分组管理） | 办公 |
+| **AgentWorkspace** | `wsl_desktop`（WSL2 + Xvfb 隔离桌面，xdotool 操作 / 截屏 / 画面流） | 办公 |
 | **FileSystem** | `file_read`、`file_write`、`file_list`、`file_search`、`file_edit`、`file_delete`、`multi_edit`、`move_file`、`todo_write` | 全部 |
 | **CodeQuality** | `code_execute`、`code_lint`、`code_format`、`dependency_check`、`project_context`、`project_index` | 办公/编程 |
 | **CodeReview** | `code_review`（阿里 OCR 混合审查） | 全部 |
@@ -446,10 +506,14 @@ Windows 上强制启用 GPU 硬件加速（可在设置中关闭）：
 - **Safe 模式**：只读操作自动允许，写操作需确认
 - **Off 模式**：所有操作逐条确认
 - 请求确认时通过弹窗（`ConfirmDialog`）实时询问用户，窗口关闭自动拒绝
+- **子 Agent 同源审批**：专家/后台 Agent 调用工具时走与主链路**同一套** `evaluate` 决策 + 弹窗确认 + 拒绝缓存；若调用方未提供确认回调则 **fail-closed 拒绝**执行，且禁止子 Agent 再调用 `agent_expert`（防递归派生）
+- **桌面工具细粒度授权**：`wsl_desktop` 按 action 分级——画面读取与交互类（screenshot / click / type / paste / clipboard_read 等）在办公与编程模式默认放行，而 `exec` / `launch` / `set_resolution` 归入需确认档，堵住「绕过 terminal_exec 审批」的通道
 
 ### 安全基线
 - `contextIsolation: true` + `nodeIntegration: false` + `sandbox: false`（webview 需要）
 - 外部链接仅允许 http/https 协议，交由系统浏览器打开
+- **敏感文件读取兜底**：阻止 Agent 读取 SSH/GPG 密钥、`.env`、`.npmrc`、`.netrc`、凭据与证书文件、KeePass 库、Kubernetes 与 Docker/AWS 配置等（路径分隔符跨平台匹配）
+- **内网与元数据地址防护**：拦截回环、私有网段与云厂商元数据服务地址，IPv6 场景兼容 `new URL()` 返回的带方括号主机名（如 `[fe80::1]`）
 - 渲染进程崩溃自动 reload 恢复
 - 全局 `uncaughtException` / `unhandledRejection` 捕获，防止静默崩溃
 - 背景图/主题包等用户文件校验路径安全（只允许操作 userData 内文件）
@@ -464,6 +528,13 @@ Windows 上强制启用 GPU 硬件加速（可在设置中关闭）：
 - **内阴影立体感**：圆角边缘内阴影，视觉更立体
 - **拖拽增强**：标题栏抓手光标、防误选文本
 - **开屏动画**：粒子汇聚 + 文字描边 + 爆发转场
+
+### 布局与响应式
+
+- **右侧栏可收起**：`Ctrl+B` 或右上角按钮切换，默认收起只保留「侧边栏 + 会话区」；内嵌浏览器开启期间**自动锁定为展开**，避免收起导致 webview 卸载、丢失录制现场
+- **窄窗口自动降级**：窗口宽度低于 1100px 时自动收敛左右栏宽度，保证会话区可用；用户手动拖宽的数值会被记住，窗口恢复后自动还原，不永久改写偏好
+- **状态落盘防抖**：栏位折叠状态仅在值真正变化时写入设置，避免拖拽过程中的高频磁盘写入
+- **面板懒加载**：MCP / 技能 / Agent 系统等全局面板按需 `lazy` 加载，不拖慢冷启动
 
 ---
 
@@ -535,6 +606,8 @@ ximo-agent/
 │   │   │   ├── Browser/          浏览器自动化
 │   │   │   ├── CodeQuality/      代码质量（含 OCR 代码审查）
 │   │   │   ├── ComputerUse/      电脑操控
+│   │   │   ├── VirtualDesktop/   Windows 虚拟桌面分组管理
+│   │   │   ├── AgentWorkspace/   WSL2 + Xvfb 隔离桌面（引导链 / xdotool / 画面流）
 │   │   │   ├── Design/           设计系统（130+ 品牌 + 4 模板 + 139 组件 + 主题）
 │   │   │   ├── FileSystem/       文件系统
 │   │   │   ├── Git/              Git
@@ -555,7 +628,11 @@ ximo-agent/
 │   │   │   ├── PlanSpecTool.ts   Plan/Spec 工作流
 │   │   │   ├── UIGenerateTool.ts UI 生成
 │   │   │   └── WebSearchTool.ts  联网搜索
-│   │   ├── ipc/                  IPC 处理器（chat/computer-use/data/fs/misc/network/skill/system/update/window）
+│   │   ├── AgentSystem/          后台 Agent（定义库 / 实例注册 / 工作上下文）
+│   │   ├── AgentSystemStore.ts   Agent 实例执行引擎（并发控制 + 桌面互斥队列）
+│   │   ├── ScheduleStore.ts      定时调度（interval/daily/weekly + 错过补跑）
+│   │   ├── AssistWatcher.ts      主动分担感知器（默认关闭，fail-closed）
+│   │   ├── ipc/                  IPC 处理器（chat/stream/provider/cancel/computer-use/data/fs/network/skill/system/update/window/workspace/agent-task）
 │   │   ├── cache/                缓存模块
 │   │   │   └── prefix-shape.ts   PrefixShape 哈希诊断
 │   │   ├── BackgroundStore.ts    背景图管理
@@ -573,42 +650,56 @@ ximo-agent/
 │   │   ├── window-manager.ts     窗口管理（透明圆角）
 │   │   └── index.ts              主进程入口（IPC 注册）
 │   ├── preload/
-│   │   └── index.ts              contextBridge 安全 API
+│   │   ├── index.ts              contextBridge 安全 API（按域合并）
+│   │   └── extended-api.ts       扩展 API 面
 │   ├── renderer/                 渲染进程
 │   │   ├── public/ui-previews/   100+ UI 动效预览（HTML + GIF）
 │   │   └── src/
 │   │       ├── agents/           AI 专家库（254 位，懒加载）
 │   │       ├── components/       UI 组件
-│   │       │   ├── chat-input/   输入框组件（专家/风格/技能/模型选择器）
+│   │       │   ├── chat-input/   输入框组件（专家/风格/技能/模型选择器、推理标尺、模式工具面板）
 │   │       │   ├── coding/       编程模式组件
 │   │       │   ├── design/       设计模式组件（自由画布/组件预览）
+│   │       │   ├── desktop/      Agent 桌面面板（实时画面 / 日志 / 独立派单）
+│   │       │   ├── icons/        自绘图标集与 lucide 桥接
 │   │       │   ├── layouts/      布局组件（三模式）
 │   │       │   ├── message/      消息渲染（ExpertWorkCard 等）
 │   │       │   ├── office/       办公模式组件（内嵌浏览器/MCP/技能面板）
+│   │       │   ├── panels/       全局面板（Agent 系统/MCP/技能/知识库/记忆）
 │   │       │   ├── settings/     设置面板（6 个 Tab + 主题编辑器）
-│   │       │   ├── shared/       共享组件
+│   │       │   ├── shared/       共享组件（EmptyState/ErrorBanner/Spinner/ModeWelcome）
 │   │       │   ├── sidebar/      侧边栏组件
 │   │       │   ├── transcript/   对话流组件
 │   │       │   └── ...           全局组件
-│   │       ├── hooks/            自定义 Hooks（useAppEffects 等）
-│   │       ├── lib/              工具库
+│   │       ├── hooks/            自定义 Hooks（useAppEffects / useVoiceDiscussion 等）
+│   │       ├── lib/              工具库（accent / auto-mode / reasoning-levels / handoff / transcriptAdapter）
 │   │       ├── modes/            模式定义 + 提示词
-│   │       ├── store/            Zustand 状态管理（含 buildApiMessages 专家提示词注入 / runStream 流式处理）
-│   │       │   └── slices/       状态切片（agent/browser/conversation/design/project/skills/stream）
+│   │       ├── store/            Zustand 状态管理（含 buildApiMessages 消息构建 / runStream 流式处理）
+│   │       │   └── slices/       状态切片（agent/browser/conversation/design/desktop/project/skills/stream）
 │   │       ├── App.tsx           渲染入口
 │   │       └── main.tsx          React 入口
 │   └── shared/                   主进程与渲染进程共享
-│       ├── types/                类型定义（core/settings/messaging/tools/skills/experts/network/ui/mcp/transition）
+│       ├── types/                类型定义（core/settings/messaging/tools/skills/experts/network/ui/mcp/desktop/transition）
 │       ├── cache/                缓存模块（context-manager/normalize-usage/tool-normalize）
+│       ├── preload-api/          preload 暴露面按域拆分定义
+│       ├── glm-paradigm/         工程范式提示词（按主题拆分）
+│       ├── agent-definition.ts   Agent 定义/实例类型
+│       ├── agent-schedule.ts     定时计划类型与调度规则
+│       ├── models.ts             模型 ID 归一化（历史 ID 兜底映射）
 │       ├── utils/                工具函数
 │       ├── agents-raw.json       254 位 AI 专家原始数据（156KB）
 │       ├── defaults.ts           默认设置
-│       ├── glm-paradigm.ts       工程范式提示词
 │       └── context-compress.ts   三级压缩算法
-├── tests/                        测试（main/renderer/shared 三层）
-│   ├── main/                     agent-loop/api-body/checkpoint-store/deepseek/permission/prefix-shape/provider/store/tool-registry
-│   ├── renderer/                 buildApiMessages-pair/skillCommands
-│   └── shared/                   context-compress/context-manager/defaults/normalize-usage/tool-normalize
+├── tests/                        测试
+│   ├── main/                     agent-loop/agent-workspace/api-body/checkpoint-store/deepseek/permission/prefix-shape/provider/store/tool-registry
+│   ├── renderer/                 accent/build-api-messages/memory-format/transcript-order/skillCommands
+│   ├── shared/                   context-compress/context-manager/defaults/normalize-usage/tool-normalize
+│   ├── functional/               功能测试
+│   ├── integration/              集成测试
+│   ├── regression/               回归测试
+│   ├── smoke/                    冒烟测试
+│   ├── ui/                       UI 测试
+│   └── fuzz/                     模糊测试
 ├── electron.vite.config.ts       构建配置（含静态资源复制插件）
 ├── tailwind.config.js            Tailwind 配置
 ├── postcss.config.js             PostCSS 配置
@@ -622,7 +713,7 @@ ximo-agent/
 ## 开发命令
 
 ```bash
-npm run dev                # 启动开发模式（electron-vite dev）
+npm run dev                # 启动开发模式（scripts/dev.mjs 封装 electron-vite dev）
 npm run build              # 构建产物到 out/
 npm run start              # 预览构建产物
 npm run build:win          # 打包 Windows NSIS 安装包
@@ -632,8 +723,10 @@ npm run typecheck:web      # 渲染进程类型检查
 npm run test               # 运行测试
 npm run test:watch         # 测试监听模式
 npm run test:coverage      # 测试覆盖率报告
+npm run icons:thin         # 生成细线条自绘图标集
 npm run make-icon          # 重新生成图标
 npm run gen-previews       # 重新生成 UI 组件预览
+npm run download-whisper   # 下载本地语音识别模型
 ```
 
 ---
@@ -685,6 +778,8 @@ npm run gen-previews       # 重新生成 UI 组件预览
   - `imported-skills.json` — 导入的技能
   - `mcp-config.json` — MCP 服务器配置
   - `experts.json` — 自定义 AI 专家
+  - `agent-definitions.json` / `agent-instances.json` — Agent 定义库与实例记录
+  - `schedules.json` — 定时任务计划
   - `pasted-images/` — 粘贴的截图
 - 路径别名：渲染层 `@renderer` → `src/renderer/src`，主进程 `@main` → `src/main`，共享 `@shared` → `src/shared`
 - 构建：`electron.vite.config.ts` 中 `copyStaticAssets` 负责复制非 JS 资源（Design 资产 + tokenizer 词表）

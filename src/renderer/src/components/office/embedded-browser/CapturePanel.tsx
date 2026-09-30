@@ -38,16 +38,16 @@ export function CapturePanel({ requests, isRecording, onClear, onClose }: Captur
               <div className="flex items-center gap-1.5">
                 <span className={`shrink-0 rounded-control px-1 py-0.5 text-caption font-bold ${
                   req.method === 'GET' ? 'bg-blue-500/15 text-blue-400' :
-                  req.method === 'POST' ? 'bg-green-500/15 text-green-400' :
-                  req.method === 'PUT' ? 'bg-amber-500/15 text-amber-400' :
-                  req.method === 'DELETE' ? 'bg-red-500/15 text-red-400' :
+                  req.method === 'POST' ? 'bg-state-success/15 text-state-success' :
+                  req.method === 'PUT' ? 'bg-state-warning/15 text-state-warning' :
+                  req.method === 'DELETE' ? 'bg-state-error/15 text-state-error' :
                   'bg-gray-500/15 text-gray-400'
                 }`}>
                   {req.method}
                 </span>
                 {req.statusCode && (
                   <span className={`shrink-0 text-caption font-medium ${
-                    req.statusCode < 300 ? 'text-green-400' : req.statusCode < 400 ? 'text-amber-400' : 'text-red-400'
+                    req.statusCode < 300 ? 'text-state-success' : req.statusCode < 400 ? 'text-state-warning' : 'text-state-error'
                   }`}>
                     {req.statusCode}
                   </span>

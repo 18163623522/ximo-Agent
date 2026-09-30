@@ -16,7 +16,7 @@ interface SidebarNavItemProps {
 const BADGE_TONE: Record<NonNullable<SidebarNavItemProps['tone']>, string> = {
   default: 'text-text-muted bg-bg-hover',
   accent: 'text-accent bg-accent/10',
-  warn: 'text-amber-500 bg-amber-500/10',
+  warn: 'text-state-warning bg-state-warning/10',
   off: 'text-text-tertiary bg-bg-hover',
 }
 

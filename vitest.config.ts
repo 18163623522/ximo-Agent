@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
 
 export default defineConfig({
+  // tests/ui 下的组件测试需要 JSX automatic runtime
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
       '@main': resolve(__dirname, 'src/main'),
@@ -11,7 +13,11 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
+      'tests/**/*.spec.ts'
+    ],
     coverage: {
       provider: 'v8',
       include: ['src/shared/**/*.ts', 'src/main/**/*.ts'],

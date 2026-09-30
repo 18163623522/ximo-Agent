@@ -12,7 +12,10 @@ function flattenTree(nodes: FileTreeNode[], prefix = ''): string[] {
   return result
 }
 
-/** @file 引用 hook — 检测 @ 触发文件列表，键盘导航 */
+/** 特殊提及：Agent 系统桌面 — 消息发送后由 buildUserMessage 路由给桌面 Agent */
+export const DESKTOP_MENTION = '@Agent系统桌面'
+
+/** @file 引用 hook — 检测 @ 触发候选列表（项目文件 + Agent 系统桌面），键盘导航 */
 export function useFileMention(
   textareaRef: React.RefObject<HTMLTextAreaElement>,
   text: string,
@@ -22,9 +25,11 @@ export function useFileMention(
 ): {
   showFileMention: boolean
   matchedFiles: string[]
+  desktopMentionAvailable: boolean
   selectedMentionIndex: number
   setSelectedMentionIndex: React.Dispatch<React.SetStateAction<number>>
   insertFileMention: (filePath: string) => void
+  insertDesktopMention: () => void
   handleMentionKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => boolean
 } {
   const [showFileMention, setShowFileMention] = useState(false)
@@ -46,7 +51,6 @@ export function useFileMention(
   }, [projectPath, currentMode])
 
   useEffect(() => {
-    if (currentMode !== 'coding' || !projectPath) { setShowFileMention(false); return }
     const ta = textareaRef.current
     if (!ta) return
     const cursorPos = ta.selectionStart
@@ -59,39 +63,68 @@ export function useFileMention(
     } else {
       setShowFileMention(false)
     }
-  }, [text, currentMode, projectPath, textareaRef])
+  }, [text, textareaRef])
 
   const matchedFiles = useMemo(() => {
+    if (currentMode !== 'coding' || !projectPath) return []
     if (!mentionQuery) return projectFiles.slice(0, 10)
     const lower = mentionQuery.toLowerCase()
     return projectFiles.filter((f) => f.toLowerCase().includes(lower)).slice(0, 10)
-  }, [mentionQuery, projectFiles])
+  }, [mentionQuery, projectFiles, currentMode, projectPath])
 
-  const insertFileMention = useCallback((filePath: string): void => {
+  /** 桌面提及是否可候选 — 空 query 直接候选；否则按前缀模糊匹配 */
+  const desktopMentionAvailable = useMemo(() => {
+    if (!mentionQuery) return true
+    return 'agent系统桌面'.includes(mentionQuery.toLowerCase())
+  }, [mentionQuery])
+
+  /** 用选中的候选替换光标前的 @query */
+  const replaceMention = useCallback((token: string): void => {
     const ta = textareaRef.current
     if (!ta) return
     const cursorPos = ta.selectionStart
     const beforeCursor = text.slice(0, cursorPos)
     const afterCursor = text.slice(cursorPos)
-    const newText = beforeCursor.replace(/@([^\s@]*)$/, `@${filePath} `) + afterCursor
-    setText(newText)
+    const nextBefore = beforeCursor.replace(/@([^\s@]*)$/, `${token} `)
+    setText(nextBefore + afterCursor)
     setShowFileMention(false)
     requestAnimationFrame(() => {
       ta.focus()
-      const newPos = beforeCursor.replace(/@([^\s@]*)$/, `@${filePath} `).length
-      ta.setSelectionRange(newPos, newPos)
+      ta.setSelectionRange(nextBefore.length, nextBefore.length)
     })
   }, [text, textareaRef, setText])
 
+  const insertFileMention = useCallback((filePath: string): void => {
+    replaceMention(`@${filePath}`)
+  }, [replaceMention])
+
+  const insertDesktopMention = useCallback((): void => {
+    replaceMention(DESKTOP_MENTION)
+  }, [replaceMention])
+
   const handleMentionKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>): boolean => {
-    if (showFileMention && matchedFiles.length > 0) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedMentionIndex((prev) => (prev + 1) % matchedFiles.length); return true }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedMentionIndex((prev) => (prev - 1 + matchedFiles.length) % matchedFiles.length); return true }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertFileMention(matchedFiles[selectedMentionIndex]); return true }
+    const total = (desktopMentionAvailable ? 1 : 0) + matchedFiles.length
+    if (showFileMention && total > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedMentionIndex((prev) => (prev + 1) % total); return true }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedMentionIndex((prev) => (prev - 1 + total) % total); return true }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        if (desktopMentionAvailable && selectedMentionIndex === 0) {
+          insertDesktopMention()
+        } else {
+          const fileIndex = selectedMentionIndex - (desktopMentionAvailable ? 1 : 0)
+          insertFileMention(matchedFiles[fileIndex])
+        }
+        return true
+      }
       if (e.key === 'Escape') { e.preventDefault(); setShowFileMention(false); return true }
     }
     return false
-  }, [showFileMention, matchedFiles, selectedMentionIndex, insertFileMention])
+  }, [showFileMention, desktopMentionAvailable, matchedFiles, selectedMentionIndex, insertDesktopMention, insertFileMention])
 
-  return { showFileMention, matchedFiles, selectedMentionIndex, setSelectedMentionIndex, insertFileMention, handleMentionKeyDown }
+  return {
+    showFileMention, matchedFiles, desktopMentionAvailable,
+    selectedMentionIndex, setSelectedMentionIndex,
+    insertFileMention, insertDesktopMention, handleMentionKeyDown,
+  }
 }

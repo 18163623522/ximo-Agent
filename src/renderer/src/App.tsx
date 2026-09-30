@@ -6,6 +6,7 @@ import { Sidebar } from './components/Sidebar'
 import { RightSidebar } from './components/RightSidebar'
 import { ResizableDivider } from './components/ResizableDivider'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { AssistProposalDialog } from './components/AssistProposalDialog'
 import { StartupAnimation } from './components/startup/StartupAnimation'
 import { CursorEffects } from './components/startup/CursorEffects'
 import { VoiceOrb } from './components/voice/VoiceOrb'
@@ -23,6 +24,7 @@ const MemoryPanel = lazy(() => import('./components/panels/MemoryPanel').then(m 
 const KnowledgePanel = lazy(() => import('./components/panels/KnowledgePanel').then(m => ({ default: m.KnowledgePanel })))
 const McpPanel = lazy(() => import('./components/panels/McpPanel').then(m => ({ default: m.McpPanel })))
 const SkillPanel = lazy(() => import('./components/panels/SkillPanel').then(m => ({ default: m.SkillPanel })))
+const AgentSystemPanel = lazy(() => import('./components/panels/AgentSystemPanel').then(m => ({ default: m.AgentSystemPanel })))
 const PlanSpecDialog = lazy(() => import('./components/panels/PlanSpecDialog').then(m => ({ default: m.PlanSpecDialog })))
 const TokenStatsModal = lazy(() => import('./components/panels/TokenStatsModal').then(m => ({ default: m.TokenStatsModal })))
 
@@ -82,6 +84,7 @@ export default function App(): React.ReactElement {
   const rightPanelCollapsed = useStore((s) => s.rightPanelCollapsed)
   const setRightPanelCollapsed = useStore((s) => s.setRightPanelCollapsed)
   const browserOpen = useStore((s) => s.browserOpen)
+  const desktopOpen = useStore((s) => s.desktopOpen)
   const collapseRightPanel = useCallback((): void => setRightPanelCollapsed(true), [setRightPanelCollapsed])
   const expandRightPanel = useCallback((): void => setRightPanelCollapsed(false), [setRightPanelCollapsed])
 
@@ -89,9 +92,9 @@ export default function App(): React.ReactElement {
   // 避免出现"输入框选了手动审批、弹窗却照样不弹"的第二套真相
   const setAutoModeLevel = useStore((s) => s.setAutoModeLevel)
 
-  // 内嵌浏览器由右栏承载（webview + 抓包 + 录制），收起会让它卸载并丢失录制现场，
-  // 因此浏览器开启期间锁定为展开态 — 对应「工具在跑就展开，不跑就收着」
-  const rightPanelHidden = rightPanelCollapsed && !browserOpen
+  // 内嵌浏览器 / 虚拟桌面 由右栏承载，收起会卸载并丢失现场，
+  // 因此开启期间锁定为展开态 — 对应「工具在跑就展开，不跑就收着」
+  const rightPanelHidden = rightPanelCollapsed && !browserOpen && !desktopOpen
 
   // ---- 窄窗口降级 ----
   // 全仓原先 0 个尺寸断点：窗口窄化时左右栏固定占用，会话区被压到不可用。
@@ -170,7 +173,7 @@ export default function App(): React.ReactElement {
           <button aria-label="展开右侧栏 (Ctrl+B)"
             onClick={expandRightPanel}
             title="展开右侧栏 (Ctrl+B)"
-            className="group flex h-full w-6 shrink-0 flex-col items-center justify-center border-l border-border-subtle glass text-text-muted transition-colors hover:text-accent active:scale-[0.97]"
+            className="group flex h-full w-6 shrink-0 flex-col items-center justify-center border-l border-border-subtle glass-bar text-text-muted transition-colors hover:text-accent active:scale-[0.97]"
           >
             <ChevronLeft size={13} className="transition-transform duration-fast group-hover:-translate-x-0.5" />
           </button>
@@ -182,9 +185,9 @@ export default function App(): React.ReactElement {
               minWidth={240}
               maxWidth={800}
               onResize={setRightWidth}
-              snapThreshold={browserOpen ? undefined : 200}
-              onSnapCollapse={browserOpen ? undefined : collapseRightPanel}
-              onCollapseClick={browserOpen ? undefined : collapseRightPanel}
+              snapThreshold={browserOpen || desktopOpen ? undefined : 200}
+              onSnapCollapse={browserOpen || desktopOpen ? undefined : collapseRightPanel}
+              onCollapseClick={browserOpen || desktopOpen ? undefined : collapseRightPanel}
               collapseTitle="收起右侧栏 (Ctrl+B)"
             />
             <div style={{ width: `${rightWidth}px`, flexShrink: 0 }} className="h-full">
@@ -201,6 +204,7 @@ export default function App(): React.ReactElement {
       <Suspense fallback={null}><KnowledgePanel /></Suspense>
       <Suspense fallback={null}><McpPanel /></Suspense>
       <Suspense fallback={null}><SkillPanel /></Suspense>
+      <Suspense fallback={null}><AgentSystemPanel /></Suspense>
       <Suspense fallback={null}><PlanSpecDialog /></Suspense>
       <ConfirmDialog
         open={confirmState !== null}
@@ -210,6 +214,8 @@ export default function App(): React.ReactElement {
         onCancel={handleCancel}
         onRemember={() => setAutoModeLevel('yolo')}
       />
+      {/* 工作分摊提议弹窗 — 主进程感知到可分担的工作后征求用户同意 */}
+      <AssistProposalDialog />
       <Suspense fallback={null}><TokenStatsModal /></Suspense>
 
       {/* 鼠标特效全局层 — 跟随 + 点击动画 */}

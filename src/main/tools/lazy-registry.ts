@@ -128,6 +128,18 @@ const moduleFactories: Record<string, ToolFactory> = {
   office: async () => {
     const { OfficeDocsTool } = await import('./Office')
     return [new OfficeDocsTool()]
+  },
+
+  // VirtualDesktop — Windows 虚拟桌面管理
+  virtual_desktop: async () => {
+    const { VirtualDesktopTool } = await import('./VirtualDesktop')
+    return [new VirtualDesktopTool()]
+  },
+
+  // AgentWorkspace — WSL 隔离桌面环境
+  agent_workspace: async () => {
+    const { WslDesktopTool } = await import('./AgentWorkspace')
+    return [new WslDesktopTool()]
   }
 }
 
@@ -138,7 +150,7 @@ const moduleFactories: Record<string, ToolFactory> = {
 const modeModules: Record<string, string[]> = {
   office: [
     'web_intelligence', 'computer_use',
-    'file_system', 'terminal', 'git', 'code_quality', 'code_review', 'skill', 'vision', 'memory', 'office'
+    'file_system', 'terminal', 'git', 'code_quality', 'code_review', 'skill', 'vision', 'memory', 'office', 'virtual_desktop', 'agent_workspace'
   ],
   coding: [
     'code_quality', 'code_review', 'file_system', 'terminal', 'git', 'web_intelligence', 'skill', 'vision', 'memory', 'plan_spec'
@@ -171,6 +183,10 @@ export const modeToolNames: Record<string, string[]> = {
     'skill_record', 'skill_invoke', 'agent_expert', 'create_tool',
     // 办公文档（OfficeCLI 驱动）— Word/Excel/PowerPoint 读改
     'office_docs',
+    // Windows 虚拟桌面管理
+    'virtual_desktop',
+    // WSL 隔离桌面环境
+    'wsl_desktop',
     // 视觉模型（Agent 的「眼睛」）
     'vision_analyze',
     // 模式记忆 + 知识库

@@ -33,3 +33,5 @@ export type {
 export type { ParticleVarRange, TransitionAnimationFile } from './transition'
 
 export type { McpTransport, McpServerConfig } from './mcp'
+
+export type { VirtualDesktopInfo, DesktopWindowInfo, DesktopActionResult } from './desktop'

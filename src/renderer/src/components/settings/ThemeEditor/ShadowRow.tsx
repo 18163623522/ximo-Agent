@@ -103,7 +103,7 @@ function ShadowLayerEditor({
         </span>
         <button aria-label="删除此层"
           onClick={onRemove}
-          className="rounded-control p-0.5 text-text-muted transition-colors hover:text-red-400 active:scale-[0.97]"
+          className="rounded-control p-0.5 text-text-muted transition-colors hover:text-state-error active:scale-[0.97]"
           title="删除此层"
         >
           <Trash2 size={11} />

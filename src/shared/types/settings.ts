@@ -213,6 +213,18 @@ edgeTtsVoice?: string
   /** STT 模型名（缺省 whisper-1） */
   sttModel?: string
 
+  // ---- 语音功能开关 ----
+  /** 是否显示悬浮语音球（关闭后语音输入与语音讨论入口一并隐藏） */
+  voiceOrbEnabled?: boolean
+  /** 是否启用语音讨论功能（关闭后仅保留字幕播报，语音球仍可通过面板使用） */
+  voiceDiscussionEnabled?: boolean
+  /** 语音讨论的 System Prompt（留空使用内置文案） */
+  voiceDiscussionPrompt?: string
+  /** AI 回复结束后自动开始下一轮录音（关闭后每轮需手动点麦克风） */
+  voiceDiscussionAutoContinue?: boolean
+  /** 语音讨论单次回复长度上限（token，缺省 2048） */
+  voiceDiscussionMaxTokens?: number
+
   // ---- 语音讨论自定义UI ----
   /** 语音讨论面板样式：default=默认, minimal=极简, cyberpunk=赛博朋克, glass=毛玻璃, neon=霓虹 */
   voiceDiscussionStyle?: VoiceDiscussionStyle
@@ -250,6 +262,11 @@ edgeTtsVoice?: string
   cursorClickCount?: number
   /** 特效生存时长（ms，400 ~ 3000） */
   cursorEffectDuration?: number
+
+  // ---- 工作分摊（Agent 感知用户电脑操作） ----
+  /** 开启后定期感知用户电脑中的工作内容，发现可分担的工作先弹窗征求同意，再派后台 Agent 执行。
+   *  隐私敏感：默认关闭，须用户显式开启；感知数据（窗口标题 + 前台文本大纲）只在内存中流转，不落盘 */
+  assistWatchEnabled?: boolean
 }
 
 /** 鼠标跟随特效样式 */

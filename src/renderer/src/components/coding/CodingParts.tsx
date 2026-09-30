@@ -29,8 +29,8 @@ export function ChangeSummarySection({
         <FolderOpen size={13} className="text-accent shrink-0" />
         <span className="text-text-secondary shrink-0">变更摘要</span>
         <span className="text-text-muted">{changeRows.length} 个文件</span>
-        <span className="text-green-400 font-mono">+{totalAdditions}</span>
-        <span className="text-red-400 font-mono">-{totalDeletions}</span>
+        <span className="text-state-success font-mono">+{totalAdditions}</span>
+        <span className="text-state-error font-mono">-{totalDeletions}</span>
         <span className="ml-auto flex items-center gap-1 text-text-muted shrink-0">
           <ChevronDown size={13} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </span>
@@ -58,8 +58,8 @@ export function ChangeSummarySection({
           <div className="ios-card mt-1.5 flex items-center gap-3 px-4 py-2">
             <span className="text-sm text-text-primary">{changeRows.length} 个文件已更改</span>
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-sm font-medium text-green-400">+{totalAdditions}</span>
-              <span className="text-sm font-medium text-red-400">-{totalDeletions}</span>
+              <span className="text-sm font-medium text-state-success">+{totalAdditions}</span>
+              <span className="text-sm font-medium text-state-error">-{totalDeletions}</span>
               <button
                 onClick={() => sendMessage(`请使用 git_operations 工具查看当前项目的 diff 详细信息。${projectPath ? `仓库路径：${projectPath}` : ''}`, { skipNetworkHint: true })}
                 className="icon-btn rounded-card p-1"
@@ -159,7 +159,7 @@ export function CodingActionBar({
           className="icon-btn flex h-8 w-8 items-center justify-center rounded-full border border-border"
           title="复制变更列表"
         >
-          {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+          {copied ? <Check size={13} className="text-state-success" /> : <Copy size={13} />}
         </button>
         <button aria-label="提交更改 (Git commit)"
           onClick={handleCommit}

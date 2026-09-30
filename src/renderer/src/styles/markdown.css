@@ -2,11 +2,11 @@
   /* ═══ Markdown 正文样式 ═══ */
   .markdown-body {
     @apply text-text-primary leading-relaxed;
-    font-size: var(--chat-font-size, 15px);
+    font-size: var(--chat-font-size, 16px);
   }
-  .chat-fs-sm { --chat-font-size: 13px; }
-  .chat-fs-md { --chat-font-size: 15px; }
-  .chat-fs-lg { --chat-font-size: 17px; }
+  .chat-fs-sm { --chat-font-size: 14px; }
+  .chat-fs-md { --chat-font-size: 16px; }
+  .chat-fs-lg { --chat-font-size: 18px; }
   .markdown-body p {
     @apply my-3;
   }

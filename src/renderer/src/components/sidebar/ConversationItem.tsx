@@ -111,7 +111,7 @@ export const ConversationItem = memo(function ConversationItem({
       >
         <span className={`h-2 w-2 shrink-0 rounded-full transition-shadow ${
           conv.mode === 'office' ? 'bg-blue-400' :
-          conv.mode === 'coding' ? 'bg-emerald-400' : 'bg-purple-400'
+          conv.mode === 'coding' ? 'bg-state-success' : 'bg-purple-400'
         } ${isActive ? 'shadow-glow animate-pulse-dot' : ''}`} />
         <span className="truncate flex-1">{conv.title}</span>
         {ctxTokens > 0 && (
@@ -152,7 +152,7 @@ export const ConversationItem = memo(function ConversationItem({
               onDelete(conv.id)
               onContextMenu(null)
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors active:scale-[0.97]"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-state-error hover:bg-state-error/10 transition-colors active:scale-[0.97]"
           >
             <Trash2 size={11} /> 删除
           </button>

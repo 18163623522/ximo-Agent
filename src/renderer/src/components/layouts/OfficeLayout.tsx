@@ -125,7 +125,7 @@ function ChatHeader({ mode, title, onExport }: { mode: Mode; title?: string; onE
   const model = useStore((s) => s.settings?.model)
   const config = MODE_CONFIGS[mode]
   return (
-    <div className="flex items-center justify-between border-b border-border-subtle glass px-5 py-2 shrink-0">
+    <div className="flex items-center justify-between border-b border-border-subtle glass-bar px-5 py-2 shrink-0">
       <div className="flex items-center gap-2 no-drag">
         <span className="text-sm font-medium text-text-secondary">{config.name}</span>
         {title && <><span className="text-text-muted">·</span><span className="text-sm text-text-primary">{title}</span></>}

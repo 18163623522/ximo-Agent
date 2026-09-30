@@ -1,63 +1,97 @@
 @layer components {
-  /* ═══ 液态玻璃材质 ═══ */
+  /* ═══ 材质系统（海拔制）═══
+     玻璃是海拔，不是滤镜：三层材质对应三个海拔档位，
+     海拔越高 = 离背景越远 = blur 越大 + 底色越实 + 阴影越近越聚。
+     底色全部 color-mix 混入主题色 —— 换主题/壁纸时玻璃"呼吸"跟随。
+     主题包覆写 --glass-bg / --glass-bg-strong 时 .glass / .glass-strong 跟随，
+     三档专属令牌（--glass-{wash,card,bar}-*）独立成体系、可单独覆写。 */
+
+  /* z1 · wash — 最低海拔，最透：输入框、芯片、chip、低密度悬浮条 */
+  .glass-wash {
+    background: var(--glass-wash-bg);
+    border-color: var(--glass-wash-border);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+    box-shadow: var(--elev-1-shadow), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--edge-shade);
+  }
+
+  /* z2 · card — 中海拔：卡片、面板、工作卡、浮出内容 */
+  .glass-card {
+    background: var(--glass-card-bg);
+    border-color: var(--glass-card-border);
+    -webkit-backdrop-filter: blur(16px) saturate(135%);
+    backdrop-filter: blur(16px) saturate(135%);
+    box-shadow: var(--elev-2-shadow), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--edge-shade);
+  }
+
+  /* z3 · bar — 最高海拔，最实：头栏、侧栏、标题栏、置顶导航 */
+  .glass-bar {
+    background: var(--glass-bar-bg);
+    border-color: var(--glass-bar-border);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+    box-shadow: var(--elev-3-shadow), 0 8px 16px -8px rgba(31, 45, 74, 0.12), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--edge-shade);
+  }
+
+  /* .glass — 历史通用玻璃，语义升级为 card 档（全站现有用法自动获得新材质） */
   .glass {
     background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(12px) saturate(130%);
-    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(16px) saturate(135%);
+    backdrop-filter: blur(16px) saturate(135%);
   }
 
+  /* .glass-strong — 历史增强玻璃，语义升级为 bar 档 */
   .glass-strong {
     background: var(--glass-bg-strong);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
   }
 
-  /* 玻璃面板：模糊 + 光谱边缘高光 + 柔和投影 */
+  /* z4 · overlay — 浮层档：模态弹窗、对话框。海拔最高、最实——
+     浮在 bg-black/50 暗遮罩上必须自持对比度，绝不能把遮罩的暗透进面板。 */
+  .glass-overlay {
+    background: var(--glass-overlay-bg);
+    border-color: var(--glass-overlay-border);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    backdrop-filter: blur(28px) saturate(140%);
+    box-shadow: var(--elev-3-shadow), 0 8px 16px -8px rgba(31, 45, 74, 0.12), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--edge-shade);
+  }
+
+  /* 玻璃面板 — 语义即"浮层容器"（模态/对话框专用），指向 overlay 档。
+     全部 10 个模态（Settings/Confirm/PlanSpec/各 Panel/截图预览）走此类。
+     阴影用最深的 z4 —— 浮层离桌面最远，影子最长最深。 */
   .glass-panel {
     position: relative;
-    background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(14px) saturate(130%);
-    backdrop-filter: blur(14px) saturate(130%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
-    border-radius: 20px;
+    background: var(--glass-overlay-bg);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    backdrop-filter: blur(28px) saturate(140%);
+    border: 1px solid var(--glass-overlay-border);
+    box-shadow: var(--elev-4-shadow), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--edge-shade);
+    border-radius: 12px;
   }
 
-  /* 卡片 — 悬浮玻璃卡 */
+  /* 卡片 — 悬浮玻璃卡（实底 --bg-elevated，属于 z0 内容层，只借玻璃的边缘语言） */
   .ios-card {
     background: var(--bg-elevated);
-    border: 1px solid var(--glass-border);
-    box-shadow: inset 0 1px 0 var(--glass-highlight), 0 4px 16px rgba(0, 0, 0, 0.06);
-    border-radius: 18px;
+    border: 1px solid var(--glass-card-border);
+    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--elev-1-shadow);
+    border-radius: 12px;
     transition: transform 0.3s var(--ease-out-quart), box-shadow 0.3s var(--ease-out-quart),
       border-color 0.25s ease;
   }
   .ios-card:hover {
     transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--theme-color) 35%, var(--glass-border));
-    box-shadow: inset 0 1px 0 var(--glass-highlight), 0 10px 30px -6px var(--glow-color);
+    border-color: color-mix(in srgb, var(--theme-color) 35%, var(--glass-card-border));
+    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--elev-2-shadow), 0 10px 30px -6px var(--glow-color);
   }
 
-  /* 渐变描边（光从边缘流过） */
+  /* 渐变描边 — 已退役（去 AI 味：装饰性光谱边下线）。
+     消费方（3 个组件）零感知：容器自身边框照常渲染，仅装饰层不绘制。
+     回滚时恢复 ::before 内容即可。 */
   .edge-light {
     position: relative;
   }
   .edge-light::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--theme-color) 55%, transparent),
-      transparent 35%,
-      transparent 65%,
-      color-mix(in srgb, var(--theme-color) 30%, transparent)
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    content: none;
   }
 }

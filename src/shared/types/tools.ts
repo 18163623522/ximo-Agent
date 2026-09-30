@@ -1,6 +1,6 @@
 // ====== 工具系统类型 ======
 
-import type { ReasoningEffort, Mode } from './core'
+import type { ReasoningEffort, Mode, AutoModeLevel } from './core'
 
 /** JSON Schema 属性定义 */
 export interface ToolParamProperty {
@@ -113,4 +113,10 @@ export interface ToolContext {
 
   /** 请求用户输入（弹窗）— Plan 提问和 Spec 审核使用 */
   requestUserInput?: (type: 'ask' | 'review', title: string, content: string) => Promise<{ confirmed: boolean; response?: string }>
+
+  // ---- 子 Agent 权限检查（与主链路 tool-permissions 同源）----
+  /** 工具权限确认回调（弹窗）— YOLO 模式下为 undefined，ask 决策无此回调时拒绝执行（fail-closed） */
+  requestConfirmation?: (toolName: string, summary: string) => Promise<boolean>
+  /** Auto Mode 等级 — 子 Agent 权限决策与主链路同源的权威来源 */
+  autoModeLevel?: AutoModeLevel
 }

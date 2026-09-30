@@ -56,6 +56,20 @@ export default {
           muted: 'var(--text-muted)',
           tertiary: 'var(--text-tertiary)',
           quaternary: 'var(--text-quaternary)'
+        },
+        /*
+         * 语义状态色 — 消费 base.css 的 --state-* 与 -rgb 三元组。
+         * 用 rgb(var(--x-rgb) / <alpha-value>) 使 /80 之类透明度修饰符可用
+         * （同 accent 方案）。深色主题下 base.css 自动亮一档（400 系）。
+         * 组件禁用 green-500 / red-400 等原生色表达状态 —— 一律走 state-*。
+         */
+        state: {
+          error: 'rgb(var(--state-error-rgb, 239 68 68) / <alpha-value>)',
+          success: 'rgb(var(--state-success-rgb, 34 197 94) / <alpha-value>)',
+          warning: 'rgb(var(--state-warning-rgb, 245 158 11) / <alpha-value>)',
+          info: 'rgb(var(--state-info-rgb, 59 130 246) / <alpha-value>)',
+          connected: 'rgb(var(--state-connected-rgb, 20 184 166) / <alpha-value>)',
+          'connected-deep': 'rgb(var(--state-connected-deep-rgb, 13 148 136) / <alpha-value>)'
         }
       },
       /*
@@ -96,9 +110,12 @@ export default {
         ],
         mono: ['Cascadia Mono', 'Consolas', 'SF Mono', 'ui-monospace', 'monospace']
       },
+      /*
+       * 圆角单轨 — 全部收敛到 base.css 的 --radius-* 三档变量
+       * （control 6 / card 10 / panel 14）。原先并存的 ios: 18px / ios-lg: 22px
+       * 硬编码全仓零使用（实测 grep 0 命中），已删除，杜绝"药丸化"双轨。
+       */
       borderRadius: {
-        ios: '18px',
-        'ios-lg': '22px',
         control: 'var(--radius-control)',
         card: 'var(--radius-card)',
         panel: 'var(--radius-panel)'
@@ -130,13 +147,18 @@ export default {
         glass: 'var(--glass-shadow)',
         glow: '0 0 20px -2px var(--glow-color)',
         'glow-lg': '0 8px 32px -4px var(--glow-color)',
-        lifted: '0 12px 32px -8px rgba(0, 0, 0, 0.25)'
+        lifted: '0 12px 32px -8px rgba(0, 0, 0, 0.25)',
+        /* 海拔阴影四件套 — 与材质海拔（wash/card/bar/overlay）配套 */
+        'elev-1': 'var(--elev-1-shadow)',
+        'elev-2': 'var(--elev-2-shadow)',
+        'elev-3': 'var(--elev-3-shadow)',
+        'elev-4': 'var(--elev-4-shadow)'
       },
       animation: {
         'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
-        'scale-in': 'scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'fade-in': 'fadeIn 0.35s ease-out',
+        'slide-up': 'slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+        'scale-in': 'scaleIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both',
         'spin-slow': 'spin 8s linear infinite'
       },
       keyframes: {

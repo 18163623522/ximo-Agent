@@ -119,19 +119,19 @@ export function InlineFileEdit({
     <div className="my-1.5">
       <div
         className={`flex items-center gap-2 px-3 py-1.5 text-xs border-l-2 bg-bg-surface rounded-r-control cursor-pointer transition-colors hover:bg-bg-hover ${
-          isDone ? 'border-green-500/60' : 'border-accent'
+          isDone ? 'border-state-success/60' : 'border-accent'
         }`}
         onClick={() => hasDiff && setExpanded(!expanded)}
       >
         <span className="text-accent font-mono shrink-0">edit</span>
         <span className="text-text-primary font-mono truncate">{fileName}</span>
         {additions > 0 && (
-          <span className="text-green-500 font-mono shrink-0">+{additions}</span>
+          <span className="text-state-success font-mono shrink-0">+{additions}</span>
         )}
         {deletions > 0 && (
-          <span className="text-red-400 font-mono shrink-0">−{deletions}</span>
+          <span className="text-state-error font-mono shrink-0">−{deletions}</span>
         )}
-        {isDone && <span className="ml-auto text-green-500 shrink-0">✓</span>}
+        {isDone && <span className="ml-auto text-state-success shrink-0">✓</span>}
         {hasDiff && (
           <ChevronDown size={11} className={`shrink-0 text-text-muted transition-transform ${expanded ? 'rotate-180' : ''}`} />
         )}
@@ -144,9 +144,9 @@ export function InlineFileEdit({
                 key={i}
                 className={`px-3 flex items-start ${
                   line.type === 'add'
-                    ? 'bg-green-500/10 text-green-400'
+                    ? 'bg-state-success/10 text-state-success'
                     : line.type === 'del'
-                    ? 'bg-red-500/10 text-red-400'
+                    ? 'bg-state-error/10 text-state-error'
                     : 'text-text-muted'
                 }`}
               >

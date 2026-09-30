@@ -162,7 +162,7 @@ function ChatHeader({ mode, title, onPreview, onExport, hasContent }: { mode: Mo
   const model = useStore((s) => s.settings?.model)
   const config = MODE_CONFIGS[mode]
   return (
-    <div className="flex items-center justify-between border-b border-border-subtle glass px-5 py-2 shrink-0">
+    <div className="flex items-center justify-between border-b border-border-subtle glass-bar px-5 py-2 shrink-0">
       <div className="flex items-center gap-2 no-drag">
         <Icon name={config.icon} size={16} className="text-accent" />
         <span className="text-sm font-medium text-text-secondary">{config.name}</span>

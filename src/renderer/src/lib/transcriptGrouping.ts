@@ -194,8 +194,17 @@ export function partitionTurnItems(
 
     if (hasAnswer) {
       if (hasReasoning) {
-        // reasoning 作为过程材料
-        pushProcess({ ...item, text: '' })
+        // reasoning 作为过程材料。
+        //
+        // ⚠️ 副本必须剥离与 live 的 id 关联（id 改名），否则触发思考链重复渲染：
+        // 流式中段（推理已出、正文开始输出）时，占位项 id === live.id 且
+        // hasReasoning/hasAnswer 同时为 true → 此处 pushProcess 的副本保留原 id，
+        // TurnCollapse 的 InlineReasoning 会因 `live.id === item.id` 注入
+        // live.reasoning（**全量拼接串**），与事件流分片项（`-r` 后缀，各带分片）
+        // 叠加 → 同一段思考渲染两遍。
+        // 剥离后过程区只显示事件流分片（实时增量由分片承担，不丢实时性）；
+        // liveTextOnly 标记在此副本上无意义，一并清掉。
+        pushProcess({ ...item, text: '', id: `${item.id}-process`, liveTextOnly: undefined })
       }
       // text 作为回答
       current.outsideItems.push({ ...item, reasoning: '', reasoningComplete: true })

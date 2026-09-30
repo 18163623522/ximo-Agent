@@ -9,7 +9,9 @@ import type {
   CapturedRequest,
   ImportedSkill,
   StreamingSegment,
-  ComponentMeta
+  ComponentMeta,
+  VirtualDesktopInfo,
+  DesktopWindowInfo
 } from '@shared/types'
 
 export type { ChatMessage, ComponentMeta } from '@shared/types'
@@ -98,6 +100,8 @@ export interface StoreState {
   showMcpPanel: boolean
   /** 技能面板是否显示 */
   showSkillPanel: boolean
+  /** Agent 系统面板（桌面应用能力库 / 场景库）是否显示 */
+  showAgentSystemPanel: boolean
   /** 已激活的专家 ID 列表 */
   activeExperts: string[]
 
@@ -118,6 +122,20 @@ export interface StoreState {
   pendingDraft: { text: string; slashCommand?: { cmd: string; systemHint: string } } | null
   /** Token 统计面板是否显示 */
   showTokenStats: boolean
+
+  // ---- 虚拟桌面 ----
+  /** 虚拟桌面面板是否开启（类似 browserOpen） */
+  desktopOpen: boolean
+  /** 桌面列表 */
+  desktopList: VirtualDesktopInfo[]
+  /** 当前桌面的窗口列表 */
+  desktopWindows: DesktopWindowInfo[]
+  /** 当前活跃桌面 ID */
+  desktopActiveId: string
+  /** 加载中 */
+  desktopLoading: boolean
+  /** 错误信息 */
+  desktopError: string | null
 
   // ---- 布局 ----
   /** 右侧栏是否收起 — 收起后会话区占满宽度 */
@@ -209,6 +227,7 @@ export interface StoreState {
   setShowKnowledgePanel: (show: boolean) => void
   setShowMcpPanel: (show: boolean) => void
   setShowSkillPanel: (show: boolean) => void
+  setShowAgentSystemPanel: (show: boolean) => void
   toggleExpert: (expertId: string) => void
 
   // ---- 设计风格绑定 ----
@@ -236,10 +255,22 @@ export interface StoreState {
 
   // ---- 消息编辑 ----
   editMessage: (messageId: string) => void
+  /** 直接填充输入框草稿（如场景卡片点击） */
+  setPendingDraft: (text: string) => void
   clearDraft: () => void
 
   // ---- Token 统计 ----
   setShowTokenStats: (show: boolean) => void
+
+  // ---- 虚拟桌面 ----
+toggleDesktop: () => void
+refreshDesktops: () => Promise<void>
+switchDesktop: (desktopId: string) => Promise<void>
+createDesktop: (name?: string) => Promise<void>
+removeDesktop: (desktopId: string) => Promise<void>
+renameDesktop: (desktopId: string, name: string) => Promise<void>
+refreshDesktopWindows: (desktopId?: string) => Promise<void>
+moveWindowToDesktop: (windowTitle: string, desktopId?: string) => Promise<void>
 
   // ---- 布局 ----
   /** 设置右侧栏收起状态并持久化 */

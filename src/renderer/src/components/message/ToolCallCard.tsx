@@ -21,7 +21,7 @@ export function ToolCallCard({ tc }: { tc: { name: string; status: string; args?
     <div>
       <div
         className={`flex items-center gap-2 rounded-panel border px-3 py-1.5 text-xs cursor-pointer transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast ${
-          isDone ? 'border-green-500/30 bg-green-500/10 text-green-400'
+          isDone ? 'border-state-success/30 bg-state-success/10 text-state-success'
             : isCalling ? 'border-accent/30 bg-accent/10 text-accent halo-pulse'
               : 'border-border-subtle bg-bg-surface-soft text-text-muted'
         }`}

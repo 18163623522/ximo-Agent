@@ -1,9 +1,14 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useStore } from '@renderer/store/useStore'
 import { useStreamingTTS } from './useStreamingTTS'
-import type { ApiMessage, ChatRequest, StreamChunk } from '@shared/types'
+import type { ApiMessage } from '@shared/types'
+import { DEFAULT_DISCUSSION_MAX_TOKENS, type DiscussionState } from './useVoiceDiscussion/constants'
+import { decodeToPCM } from './useVoiceDiscussion/audio'
+import { createDiscussWithAI } from './useVoiceDiscussion/discuss'
 
-export type DiscussionState = 'idle' | 'listening' | 'transcribing' | 'speaking'
+// 对外符号与导入路径保持不变 — 实现拆分至 useVoiceDiscussion/ 子目录
+export { DEFAULT_DISCUSSION_PROMPT, DEFAULT_DISCUSSION_MAX_TOKENS } from './useVoiceDiscussion/constants'
+export type { DiscussionState } from './useVoiceDiscussion/constants'
 
 /**
  * 语音讨论模式 — 回合制，讨论内容存本地实例，不污染主对话框。
@@ -40,6 +45,9 @@ export function useVoiceDiscussion(): {
   const discussionMessagesRef = useRef<ApiMessage[]>([])
 
   const edgeTtsVoice = useStore((s) => s.settings?.edgeTtsVoice)
+  const discussionPrompt = useStore((s) => s.settings?.voiceDiscussionPrompt)
+  const autoContinue = useStore((s) => s.settings?.voiceDiscussionAutoContinue ?? true)
+  const maxTokens = useStore((s) => s.settings?.voiceDiscussionMaxTokens) ?? DEFAULT_DISCUSSION_MAX_TOKENS
   const streamingTTS = useStreamingTTS(edgeTtsVoice)
   const ttsPush = streamingTTS.push
   const ttsFlush = streamingTTS.flush
@@ -47,102 +55,33 @@ export function useVoiceDiscussion(): {
   const ttsSpeakingRef = useRef(false)
   useEffect(() => { ttsSpeakingRef.current = streamingTTS.isSpeaking }, [streamingTTS.isSpeaking])
 
-  /** 解码音频 Blob 为 16kHz 单声道 PCM */
-  const decodeToPCM = useCallback(async (blob: Blob): Promise<Float32Array> => {
-    const TARGET_SR = 16000
-    const arrayBuffer = await blob.arrayBuffer()
-    const audioCtx = new AudioContext()
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
-    audioCtx.close()
-    const targetLength = Math.ceil(audioBuffer.duration * TARGET_SR)
-    const offlineCtx = new OfflineAudioContext(1, targetLength, TARGET_SR)
-    const source = offlineCtx.createBufferSource()
-    source.buffer = audioBuffer
-    source.connect(offlineCtx.destination)
-    source.start()
-    const rendered = await offlineCtx.startRendering()
-    return rendered.getChannelData(0).slice()
-  }, [])
-
   // startRecording 用 ref 持有，避免循环依赖
   const startRecordingRef = useRef<() => void>(() => {})
   // 标记 AI 被用户手动打断，跳过自动重新录音
   const interruptedRef = useRef(false)
 
-  /** 直接调用 AI 流式接口 — 绕过 store，讨论内容不进入主对话框 */
-  const discussWithAI = useCallback(async (userText: string) => {
-    const store = useStore.getState()
-    const settings = store.settings
-    if (!settings) return
-
-    // 追加用户消息到讨论历史
-    discussionMessagesRef.current.push({ role: 'user', content: userText })
-
-    // 构建请求 — 简洁讨论模式，无工具、无思维链
-    const request: ChatRequest = {
-      mode: store.currentMode,
-      messages: [
-        { role: 'system', content: '你是用户的语音讨论伙伴。正在通过语音讨论任务方案。回复规则：极简口语化，不超过两句话，直接回答核心问题，不用列表/代码/标题。' },
-        ...discussionMessagesRef.current,
-      ],
-      model: settings.model,
-      thinkingMode: false,
-      reasoningEffort: 'off',
-      temperature: settings.temperature,
-      maxTokens: 2048,
-      sessionId: 'voice-discussion',
-      providerId: settings.activeProviderId ?? 'deepseek',
-    }
-
-    isAIRespondingRef.current = true
-    setIsAIResponding(true)
-    setState('speaking')
-
-    let fullResponse = ''
-    try {
-      await window.api.chat.stream(request, (chunk: StreamChunk) => {
-        if (chunk.content) {
-          fullResponse += chunk.content
-          ttsPush(chunk.content)
-        }
-        if (chunk.error) {
-          setError(chunk.error)
-        }
-      })
-    } catch {
-      // 流式异常 — 不中断讨论，继续下一轮
-    }
-
-    // 追加 AI 回复到讨论历史
-    if (fullResponse.trim()) {
-      discussionMessagesRef.current.push({ role: 'assistant', content: fullResponse })
-    }
-
-    isAIRespondingRef.current = false
-    setIsAIResponding(false)
-
-    if (!interruptedRef.current) {
-      // 正常结束 → 等待 TTS 朗读完毕 → 自动开始下一轮录音
-      // 需要连续 3 次（600ms）检测到非播放状态才确认 TTS 真正结束，避免 isSpeaking 异步更新导致的竞态
-      ttsFlush()
-      let stableCount = 0
-      const check = setInterval(() => {
-        if (!ttsSpeakingRef.current) {
-          stableCount++
-          if (stableCount >= 3) {
-            clearInterval(check)
-            if (isActiveRef.current) startRecordingRef.current()
-          }
-        } else {
-          stableCount = 0
-        }
-      }, 200)
-      setTimeout(() => clearInterval(check), 30000)
-    } else {
-      // 用户已手动打断 → 跳过自动重新录音
-      interruptedRef.current = false
-    }
-  }, [ttsPush, ttsFlush])
+  /** 直接调用 AI 流式接口 — 绕过 store，讨论内容不进入主对话框（实现见 discuss.ts） */
+  const discussWithAI = useMemo(
+    () =>
+      createDiscussWithAI({
+        discussionMessagesRef,
+        isActiveRef,
+        isAIRespondingRef,
+        interruptedRef,
+        ttsSpeakingRef,
+        startRecordingRef,
+        setState,
+        setIsAIResponding,
+        setError,
+        discussionPrompt,
+        maxTokens,
+        autoContinue,
+        ttsPush,
+        ttsFlush,
+      }),
+    // 依赖数组与拆分前（useCallback）保持一致
+    [ttsPush, ttsFlush, autoContinue]
+  )
 
   /** 处理录音结束后的音频 */
   const processAudio = useCallback(async (blob: Blob) => {
@@ -205,9 +144,12 @@ export function useVoiceDiscussion(): {
 
   useEffect(() => { startRecordingRef.current = startRecording }, [startRecording])
 
-  /** 切换录音 — listening→停止并发送 / speaking→打断AI并开始新录音 */
+  /** 切换录音 — idle(待机)→开始录音 / listening→停止并发送 / speaking→打断AI并开始新录音 */
   const toggleRecording = useCallback(() => {
-    if (state === 'listening') {
+    if (state === 'idle') {
+      // 关闭自动接续后的待机态：用户主动开始下一轮
+      if (isActiveRef.current) startRecordingRef.current()
+    } else if (state === 'listening') {
       const recorder = recorderRef.current
       if (recorder && recorder.state !== 'inactive') {
         recorder.stop()
@@ -227,6 +169,11 @@ export function useVoiceDiscussion(): {
 
   /** 进入语音讨论模式 */
   const start = useCallback(async () => {
+    // 权威校验：设置里关闭了就绝不启动（面板按钮已禁用，这里是第二道闸）
+    if (useStore.getState().settings?.voiceDiscussionEnabled === false) {
+      setError('语音讨论已在设置中关闭')
+      return
+    }
     setError(null)
     try {
       // 清理残留状态

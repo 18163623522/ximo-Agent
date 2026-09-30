@@ -67,8 +67,8 @@ export function CodingChangesPanel(): React.ReactElement {
             {hasChanges && (
               <>
                 <span className="shrink-0 text-caption text-text-muted">{changeRows.length} 个文件</span>
-                <span className="shrink-0 font-mono text-caption text-green-400">+{totalAdditions}</span>
-                <span className="shrink-0 font-mono text-caption text-red-400">-{totalDeletions}</span>
+                <span className="shrink-0 font-mono text-caption text-state-success">+{totalAdditions}</span>
+                <span className="shrink-0 font-mono text-caption text-state-error">-{totalDeletions}</span>
               </>
             )}
             <span className="ml-auto shrink-0 text-text-muted">
@@ -87,8 +87,8 @@ export function CodingChangesPanel(): React.ReactElement {
                     >
                       <span className="min-w-0 flex-1 truncate font-mono text-text-primary" title={row.fileName}>{row.fileName}</span>
                       <span className="shrink-0 text-caption text-text-muted">{row.changeDesc}</span>
-                      <span className="shrink-0 font-mono text-caption text-green-400">+{row.additions}</span>
-                      <span className="shrink-0 font-mono text-caption text-red-400">-{row.deletions}</span>
+                      <span className="shrink-0 font-mono text-caption text-state-success">+{row.additions}</span>
+                      <span className="shrink-0 font-mono text-caption text-state-error">-{row.deletions}</span>
                     </li>
                   ))}
                 </ul>
@@ -128,7 +128,7 @@ export function CodingChangesPanel(): React.ReactElement {
               <Reply size={13} />
             </ActionIconBtn>
             <ActionIconBtn title="复制变更列表" onClick={handleCopyChanges}>
-              {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+              {copied ? <Check size={13} className="text-state-success" /> : <Copy size={13} />}
             </ActionIconBtn>
           </div>
           <div className="grid grid-cols-3 gap-1.5">

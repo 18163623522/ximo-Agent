@@ -11,7 +11,7 @@ const MODE_LABELS: Record<Mode, string> = {
 
 const MODE_COLORS: Record<Mode, string> = {
   office: 'text-blue-400',
-  coding: 'text-emerald-400',
+  coding: 'text-state-success',
   design: 'text-purple-400'
 }
 
@@ -84,7 +84,7 @@ export function TokenStatsModal(): React.ReactElement | null {
             <div className="text-caption text-text-muted">总消息数</div>
           </div>
           <div className="ios-card p-3 text-center">
-            <TrendingUp size={16} className="mx-auto mb-1 text-emerald-400" />
+            <TrendingUp size={16} className="mx-auto mb-1 text-state-success" />
             <div className="text-lg font-bold text-text-primary">{stats.totalAssistant}</div>
             <div className="text-caption text-text-muted">AI 回复</div>
           </div>

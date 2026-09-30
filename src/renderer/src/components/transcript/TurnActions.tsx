@@ -38,7 +38,7 @@ export const TurnActions = memo(function TurnActions({
     <div className="turn-actions">
       {text.trim() && (
         <button aria-label="复制" className="turn-actions__btn" type="button" onClick={handleCopy} title="复制">
-          {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+          {copied ? <Check size={13} className="text-state-success" /> : <Copy size={13} />}
           <span>{copied ? '已复制' : '复制'}</span>
         </button>
       )}

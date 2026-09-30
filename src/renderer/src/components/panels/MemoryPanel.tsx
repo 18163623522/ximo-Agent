@@ -188,7 +188,7 @@ export function MemoryPanel(): React.ReactElement | null {
 
         {/* 底栏：用量 + 操作 */}
         <div className="flex items-center justify-between border-t border-border-subtle px-4 py-2">
-          <span className={`text-caption ${overBudget ? 'text-amber-500' : 'text-text-muted'}`}>
+          <span className={`text-caption ${overBudget ? 'text-state-warning' : 'text-text-muted'}`}>
             {contentLines} / {LINE_BUDGET} 行 · {built.trim() ? built.trim().length : 0} 字符
             {overBudget && ' · 超出建议行数，记忆越精简越有效'}
             {!overBudget && dirty && ' · 未保存'}
@@ -207,7 +207,7 @@ export function MemoryPanel(): React.ReactElement | null {
               onClick={() => void handleSave()}
               disabled={!dirty || saving}
               className={`flex items-center gap-1.5 rounded-card px-4 py-1.5 text-xs font-semibold transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] ${
-                saved ? 'bg-emerald-500/20 text-emerald-400' : dirty ? 'btn-liquid' : 'bg-bg-hover text-text-muted'
+                saved ? 'bg-state-success/20 text-state-success' : dirty ? 'btn-liquid' : 'bg-bg-hover text-text-muted'
               }`}
             >
               {saved ? <Check size={13} /> : <Save size={13} />}

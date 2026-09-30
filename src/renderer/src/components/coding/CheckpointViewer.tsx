@@ -124,7 +124,7 @@ export function CheckpointViewer({ sessionId, onRestore }: CheckpointViewerProps
                       <button
                         onClick={() => void handleRestore(cp.turn)}
                         disabled={isRestoring}
-                        className="opacity-0 group-hover:opacity-100 text-caption px-1.5 py-0.5 rounded-control text-orange-400/80 hover:text-orange-400 hover:bg-orange-500/10 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast active:scale-95 disabled:opacity-50 flex items-center gap-1"
+                        className="opacity-0 group-hover:opacity-100 text-caption px-1.5 py-0.5 rounded-control text-state-warning/80 hover:text-state-warning hover:bg-state-warning/10 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast active:scale-95 disabled:opacity-50 flex items-center gap-1"
                         title={`回退到轮次 ${cp.turn}`}
                       >
                         {isRestoring ? '...' : <><RotateCcw size={11} /> 回退</>}
@@ -144,7 +144,7 @@ export function CheckpointViewer({ sessionId, onRestore }: CheckpointViewerProps
           {/* 回退结果提示 */}
           {restoreResult && (
             <div className="border-t border-border-subtle-soft px-3 py-1.5 flex items-center gap-1.5">
-              <AlertCircle size={11} className="text-orange-400 shrink-0" />
+              <AlertCircle size={11} className="text-state-warning shrink-0" />
               <span className="text-caption text-text-muted">{restoreResult}</span>
             </div>
           )}

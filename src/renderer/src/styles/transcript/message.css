@@ -63,6 +63,31 @@
 }
 
 /* ── 消息元信息 ── */
+/* 署名行 — Quiet Precision 签名件：小圆点 + 身份 + mono 模型名 */
+.msg-byline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+.msg-byline__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--theme-color);
+  flex-shrink: 0;
+}
+.msg-byline__name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.msg-byline__model {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 .msg-meta {
   display: flex;
   align-items: center;

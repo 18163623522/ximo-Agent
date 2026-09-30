@@ -1,7 +1,9 @@
 @layer components {
   /* ═══ 特效 ═══ */
-  /* 极光环境舞台 */
+  /* 极光环境舞台 — 已退役（去 AI 味：氛围光斑下线）。
+     DOM 保留（App.tsx 零改动），仅 CSS 层不渲染；需要回滚时删除 display:none 即可。 */
   .ambient-stage {
+    display: none;
     position: fixed;
     inset: 0;
     overflow: hidden;

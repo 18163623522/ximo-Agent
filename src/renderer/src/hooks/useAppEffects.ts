@@ -232,6 +232,14 @@ export function useAppEffects(loaded: boolean): void {
     })
     return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
   }, [loaded, settings])
+
+  // ---- 后台 Agent 实例写回会话 → 重新加载（否则渲染层 _persist 全量覆盖会丢数据） ----
+  useEffect(() => {
+    if (!loaded) return
+    return window.api.agentSystem.onConversationUpdated(() => {
+      void useStore.getState().reloadConversations()
+    })
+  }, [loaded])
 }
 
 /** 危险操作确认弹窗逻辑 */

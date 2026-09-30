@@ -48,3 +48,17 @@ scripts/audit-*.cjs
 # 体积超限的大文件，禁止入库
 ximo-Agent-go.zip
 resources/officecli/*.old
+
+# 打包输出目录（electron-builder 产物，体积上百 MB）
+release*/
+dist-release/
+
+# 构建/调试临时产物
+build-log*.txt
+electron.vite.config.*.mjs
+ff-render-check.png
+generated-images/
+
+# 编辑器/工具缓存
+.zcode/
+.zcodeignore

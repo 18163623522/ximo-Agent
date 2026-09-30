@@ -63,7 +63,7 @@ export const ProjectGroup = memo(function ProjectGroup({
             e.stopPropagation()
             onRemove()
           }}
-          className="shrink-0 text-text-muted hover:text-red-400 rounded-control p-0.5 hover:bg-bg-hover transition-colors active:scale-[0.97]"
+          className="shrink-0 text-text-muted hover:text-state-error rounded-control p-0.5 hover:bg-bg-hover transition-colors active:scale-[0.97]"
           title="从列表中移除项目"
         >
           <X size={13} />

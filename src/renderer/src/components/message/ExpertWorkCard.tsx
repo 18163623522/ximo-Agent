@@ -7,10 +7,10 @@ type SubAgentEvent = NonNullable<StreamChunk['subAgentEvent']>
 /** 事件 → 图标 */
 const STAGE_ICON: Record<SubAgentEvent['stage'], React.ReactNode> = {
   started: <CircleDot size={13} className="text-accent" />,
-  tool: <Wrench size={13} className="text-amber-400/80" />,
-  toolResult: <CheckCircle2 size={13} className="text-green-500/80" />,
+  tool: <Wrench size={13} className="text-state-warning/80" />,
+  toolResult: <CheckCircle2 size={13} className="text-state-success/80" />,
   message: <MessageSquare size={13} className="text-text-muted" />,
-  finished: <CheckCircle2 size={13} className="text-green-500" />,
+  finished: <CheckCircle2 size={13} className="text-state-success" />,
 }
 
 /** 事件 → 中文标签 */
@@ -81,8 +81,8 @@ export function ExpertWorkCard({ events }: { events: SubAgentEvent[] }): React.R
             </>
           ) : (
             <>
-              <CheckCircle2 size={11} className="text-green-500" />
-              <span className="text-green-500">已完成</span>
+              <CheckCircle2 size={11} className="text-state-success" />
+              <span className="text-state-success">已完成</span>
             </>
           )}
           {hasTool && <span className="text-text-tertiary">· {toolCount} 个工具</span>}

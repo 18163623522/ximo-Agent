@@ -28,6 +28,15 @@ export const mcpFile = join(DATA_DIR, 'mcp-config.json')
 /** 导入技能文件 */
 export const importedSkillsFile = join(DATA_DIR, 'imported-skills.json')
 
+/** Agent 定时任务 */
+export const schedulesFile = join(DATA_DIR, 'schedules.json')
+
+/** Agent 定义库 */
+export const agentDefinitionsFile = join(DATA_DIR, 'agent-definitions.json')
+
+/** Agent 实例运行记录 */
+export const agentInstancesFile = join(DATA_DIR, 'agent-instances.json')
+
 /** 主题包目录 */
 export const themesDir = join(DATA_DIR, 'themes')
 

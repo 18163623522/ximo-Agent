@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { Wrench, Globe, CircleDot, Cpu } from 'lucide-react'
+import { Wrench, Globe, CircleDot, Cpu, Monitor } from 'lucide-react'
 import { useStore } from '@renderer/store/useStore'
 
 /** 开关视觉 — 与既有 chip 内的小开关保持一致 */
 function Switch({ on, tone }: { on: boolean; tone: 'accent' | 'red' | 'green' }): React.ReactElement {
-  const toneClass = tone === 'red' ? 'bg-red-500/40' : tone === 'green' ? 'bg-green-500/40' : 'bg-accent/40'
+  const toneClass = tone === 'red' ? 'bg-state-error/40' : tone === 'green' ? 'bg-state-success/40' : 'bg-accent/40'
   return (
     <span className={`relative inline-flex h-3 w-5 shrink-0 items-center rounded-full transition-colors duration-fast ${on ? toneClass : 'bg-border'}`}>
       <span className={`inline-block h-2.5 w-2.5 rounded-full bg-white transition-transform duration-fast ${on ? 'translate-x-2' : 'translate-x-0.5'}`} />
@@ -23,9 +23,11 @@ export function ModeToolPanel(): React.ReactElement {
   const browserOpen = useStore((s) => s.browserOpen)
   const isBrowserRecording = useStore((s) => s.isBrowserRecording)
   const computerUseRunning = useStore((s) => s.computerUseRunning)
+  const desktopOpen = useStore((s) => s.desktopOpen)
   const toggleBrowser = useStore((s) => s.toggleBrowser)
   const toggleBrowserRecording = useStore((s) => s.toggleBrowserRecording)
   const toggleComputerUse = useStore((s) => s.toggleComputerUse)
+  const toggleDesktop = useStore((s) => s.toggleDesktop)
 
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -40,7 +42,7 @@ export function ModeToolPanel(): React.ReactElement {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const activeCount = [browserOpen, isBrowserRecording, computerUseRunning].filter(Boolean).length
+  const activeCount = [browserOpen, isBrowserRecording, computerUseRunning, desktopOpen].filter(Boolean).length
 
   /**
    * 录制开关 — 停止录制不能直接改 store：
@@ -101,7 +103,7 @@ export function ModeToolPanel(): React.ReactElement {
               className="flex w-full items-center gap-2 rounded-card px-3 py-2 text-left transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               title={browserOpen ? undefined : '需先开启内嵌浏览器'}
             >
-              <CircleDot size={13} className={isBrowserRecording ? 'text-red-400' : 'text-text-muted'} />
+              <CircleDot size={13} className={isBrowserRecording ? 'text-state-error' : 'text-text-muted'} />
               <span className="flex-1 text-xs text-text-secondary">
                 {isBrowserRecording ? '录制中 — 点击停止' : '录制技能'}
               </span>
@@ -113,9 +115,19 @@ export function ModeToolPanel(): React.ReactElement {
               onClick={() => void toggleComputerUse()}
               className="flex w-full items-center gap-2 rounded-card px-3 py-2 text-left transition-colors hover:bg-bg-hover active:scale-[0.97]"
             >
-              <Cpu size={13} className={computerUseRunning ? 'text-green-400' : 'text-text-muted'} />
+              <Cpu size={13} className={computerUseRunning ? 'text-state-success' : 'text-text-muted'} />
               <span className="flex-1 text-xs text-text-secondary">操控电脑</span>
               <Switch on={computerUseRunning} tone="green" />
+            </button>
+
+            {/* 虚拟桌面 */}
+            <button
+              onClick={toggleDesktop}
+              className="flex w-full items-center gap-2 rounded-card px-3 py-2 text-left transition-colors hover:bg-bg-hover active:scale-[0.97]"
+            >
+              <Monitor size={13} className={desktopOpen ? 'text-accent' : 'text-text-muted'} />
+              <span className="flex-1 text-xs text-text-secondary">虚拟桌面</span>
+              <Switch on={desktopOpen} tone="accent" />
             </button>
           </div>
         </div>

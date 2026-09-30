@@ -35,12 +35,13 @@ export function TitleBar(): React.ReactElement {
   const currentConversationId = useStore((s) => s.currentConversationId)
   const isStreaming = useStore((s) => s.isStreaming)
   const browserOpen = useStore((s) => s.browserOpen)
+  const desktopOpen = useStore((s) => s.desktopOpen)
   const rightPanelCollapsed = useStore((s) => s.rightPanelCollapsed)
   const toggleRightPanel = useStore((s) => s.toggleRightPanel)
   const [isMaximized, setIsMaximized] = useState(false)
 
-  // 浏览器开启期间右栏锁定为展开（webview + 录制现场不能卸载），此时开关不可用
-  const rightPanelLocked = browserOpen
+  // 浏览器 / 虚拟桌面开启期间右栏锁定为展开，此时开关不可用
+  const rightPanelLocked = browserOpen || desktopOpen
 
   useEffect(() => {
     void window.api.window.isMaximized().then(setIsMaximized)
@@ -52,7 +53,7 @@ export function TitleBar(): React.ReactElement {
   const statusText = currentConv ? currentConv.title : 'ximo-Agent 任务状态'
 
   return (
-    <div className="drag-region relative z-20 flex h-[52px] flex-shrink-0 items-center justify-between border-b border-border-subtle glass pr-0">
+    <div className="drag-region relative z-20 flex h-[52px] flex-shrink-0 items-center justify-between border-b border-border-subtle glass-bar pr-0">
       {/* 左侧：iOS 分段控件模式切换 */}
       <div className="no-drag flex items-center pl-3">
         <div className="flex items-center gap-0.5 rounded-full border border-border-subtle bg-bg-elevated-soft p-1 shadow-inner">
@@ -92,7 +93,7 @@ export function TitleBar(): React.ReactElement {
       {/* 右侧：右侧栏开关 + 窗口控制按钮 */}
       <div className="no-drag flex h-full">
         <button aria-label={rightPanelLocked
-              ? '内嵌浏览器开启中，右侧栏保持展开'
+              ? '内嵌浏览器或虚拟桌面开启中，右侧栏保持展开'
               : rightPanelCollapsed ? '展开右侧栏 (Ctrl+B)' : '收起右侧栏 (Ctrl+B)'}
           onClick={toggleRightPanel}
           disabled={rightPanelLocked}
@@ -105,7 +106,7 @@ export function TitleBar(): React.ReactElement {
           }`}
           title={
             rightPanelLocked
-              ? '内嵌浏览器开启中，右侧栏保持展开'
+              ? '内嵌浏览器或虚拟桌面开启中，右侧栏保持展开'
               : rightPanelCollapsed ? '展开右侧栏 (Ctrl+B)' : '收起右侧栏 (Ctrl+B)'
           }
         >

@@ -11,19 +11,51 @@
     --theme-accent-hover: var(--accent-ink-strong, color-mix(in srgb, var(--theme-color) 85%, black));
     --theme-accent-muted: var(--accent-fill-top, color-mix(in srgb, var(--theme-color) 70%, white));
 
-    --bg-base: #eef0f4;
+    --bg-base: #f8f8f7;
     --bg-surface: #ffffff;
     --bg-elevated: #ffffff;
     --bg-hover: rgba(20, 30, 50, 0.06);
     --bg-input: #ffffff;
 
-    /* 玻璃材质 — 浅色主题：不透明白底，避免灰色透出 */
-    --glass-bg: #ffffff;
-    --glass-bg-strong: #ffffff;
-    --glass-border: rgba(20, 30, 50, 0.08);
+    /* 玻璃材质 — 浅色主题：底色 color-mix 混入主题色（动态取色），换主题时玻璃自动跟随 */
+    --glass-bg: color-mix(in srgb, var(--theme-color) 6%, rgba(255, 255, 255, 0.42));
+    --glass-bg-strong: color-mix(in srgb, var(--theme-color) 7%, rgba(255, 255, 255, 0.62));
+    --glass-border: rgba(20, 30, 50, 0.09);
     --glass-highlight: rgba(255, 255, 255, 0.5);
-    --glass-shadow: 0 8px 32px rgba(31, 45, 74, 0.12), 0 1.5px 6px rgba(31, 45, 74, 0.08);
-    --glow-color: var(--theme-glow, color-mix(in srgb, var(--theme-color) 38%, transparent));
+    --glass-shadow: var(--elev-2-shadow);
+
+    /* ── 材质三档（海拔制）──
+       海拔越高 = 离背景越远 = blur 越大 + 底色越实 + 阴影越近越聚。
+       底色 color-mix 混入主题色 5-8%：主题包/壁纸变化时玻璃"呼吸"跟随。
+       主题包可覆写 --glass-bg / --glass-bg-strong；三档令牌独立成体系。 */
+    --glass-wash-bg: color-mix(in srgb, var(--theme-color) 5%, rgba(255, 255, 255, 0.2));
+    --glass-card-bg: color-mix(in srgb, var(--theme-color) 6%, rgba(255, 255, 255, 0.42));
+    --glass-bar-bg: color-mix(in srgb, var(--theme-color) 7%, rgba(255, 255, 255, 0.62));
+    --glass-wash-border: rgba(20, 30, 50, 0.07);
+    --glass-card-border: rgba(20, 30, 50, 0.09);
+    --glass-bar-border: rgba(20, 30, 50, 0.11);
+
+    /* 浮层档 — 模态/弹窗专属：海拔最高，最实。
+       浮在 bg-black/50 暗遮罩上必须自持对比度，透明材质会把遮罩的暗透进面板。 */
+    --glass-overlay-bg: color-mix(in srgb, var(--theme-color) 4%, rgba(255, 255, 255, 0.94));
+    --glass-overlay-border: rgba(20, 30, 50, 0.12);
+
+    /* ── 海拔阴影三件套 ──
+       立体感的第一来源是影子：近实远虚的双影结构（贴地影 + 环境影），
+       透明度不足以"浮起"，全部按可见阈值校准。
+       z1 最浮（影子淡而散）→ z4 浮层（影子近而深）。 */
+    --elev-1-shadow: 0 1px 3px rgba(31, 45, 74, 0.1), 0 2px 8px rgba(31, 45, 74, 0.06);
+    --elev-2-shadow: 0 2px 6px rgba(31, 45, 74, 0.1), 0 8px 24px -4px rgba(31, 45, 74, 0.16);
+    --elev-3-shadow: 0 4px 10px rgba(31, 45, 74, 0.12), 0 16px 40px -8px rgba(31, 45, 74, 0.22);
+    --elev-4-shadow: 0 8px 20px rgba(31, 45, 74, 0.14), 0 24px 64px -12px rgba(31, 45, 74, 0.28);
+
+    /* 底暗边 — 物体背光面的轮廓线，与顶部高光成对（上亮下暗才立体） */
+    --edge-shade: rgba(31, 45, 74, 0.1);
+
+    /* 阅读区实底 — 壳透芯实：对话正文永远落在恒定底色上，对比度不随壁纸浮动 */
+    --bg-reading: #fefefc;
+
+    --glow-color: color-mix(in srgb, var(--theme-color) 12%, transparent);
 
     --border-DEFAULT: rgba(20, 30, 50, 0.1);
     --border-subtle: rgba(20, 30, 50, 0.06);
@@ -58,22 +90,22 @@
     /* ── 字号阶梯：7 档，每档自带行高 ──
        原先 14 档散点（7~30px），443 处任意值字号中仅 25 处配了行高
        → 同样是小字、行盒比例不同，多行并排基线参差。 */
-    --fs-caption: 11px;  --lh-caption: 15px;  /* 徽标 · kbd · 极密元信息 */
-    --fs-xs:      12px;  --lh-xs:      17px;  /* 元信息 · 时间戳 · 次级标签 */
-    --fs-sm:      13px;  --lh-sm:      19px;  /* 控件文字 · 按钮 · 导航 */
-    --fs-base:    14px;  --lh-base:    21px;  /* 紧凑正文 */
-    --fs-body:    15px;  --lh-body:    24px;  /* 会话正文（对齐 --chat-font-size） */
-    --fs-title:   20px;  --lh-title:   27px;  /* 面板标题 · 区块标题 */
-    --fs-display: 30px;  --lh-display: 37px;  /* 空态大标题 */
+    --fs-caption: 12px;  --lh-caption: 17px;  /* 徽标 · kbd · 极密元信息 */
+    --fs-xs:      13px;  --lh-xs:      19px;  /* 元信息 · 时间戳 · 次级标签 */
+    --fs-sm:      14px;  --lh-sm:      21px;  /* 控件文字 · 按钮 · 导航 */
+    --fs-base:    15px;  --lh-base:    23px;  /* 紧凑正文 */
+    --fs-body:    16px;  --lh-body:    26px;  /* 会话正文（对齐 --chat-font-size） */
+    --fs-title:   22px;  --lh-title:   30px;  /* 面板标题 · 区块标题 */
+    --fs-display: 34px;  --lh-display: 42px;  /* 空态大标题 */
 
     /* 字距 —— 负字距只对大字号有益；中文用小负字距会显挤。
        原先 body 上挂 -0.011em 是按 Inter 的拉丁度量调的，改成只给大字号用。 */
     --tracking-tight: -0.011em;
 
     /* 圆角语义 —— 4 档，替代 13 种随手写法（`rounded`(4) 与 `rounded-md`(6) 并存是主要噪音源） */
-    --radius-control: 6px;   /* 按钮 · 输入 · chip */
-    --radius-card: 10px;     /* 卡片 · 列表项 */
-    --radius-panel: 14px;    /* 浮层 · 侧栏分组 */
+    --radius-control: 8px;   /* 按钮 · 输入 · chip */
+    --radius-card: 8px;     /* 卡片 · 列表项 */
+    --radius-panel: 10px;    /* 浮层 · 侧栏分组 */
 
     /* 时长 —— 4 档，替代 150/200/300/500 + 未定义混用 */
     --dur-instant: 120ms;
@@ -89,13 +121,21 @@
     /* ── 语义状态色 ──
        刻意**不跟随主题色**：录音指示必须是红的、成功必须是绿的 ——
        这是产品语义，不是品牌色。跟主题变会让"正在录音"这个信号失去意义。
-       取名而不是散落字面量，是为了让"这是语义色、不是漏改的硬编码"一目了然。 */
+       取名而不是散落字面量，是为了让"这是语义色、不是漏改的硬编码"一目了然。
+       -rgb 三元组供 tailwind.config 的 rgb(var(--x) / <alpha-value>) 消费，
+       使 text-state-error/80 这类透明度修饰符可用（同 accent 的方案）。 */
     --state-error: #ef4444;
     --state-success: #22c55e;
     --state-warning: #f59e0b;
     --state-info: #3b82f6;
     --state-connected: #14b8a6;
     --state-connected-deep: #0d9488;
+    --state-error-rgb: 239 68 68;
+    --state-success-rgb: 34 197 94;
+    --state-warning-rgb: 245 158 11;
+    --state-info-rgb: 59 130 246;
+    --state-connected-rgb: 20 184 166;
+    --state-connected-deep-rgb: 13 148 136;
 
     /* ── 中性深度 ──
        内高光 / 内阴影 / 发丝线 / 遮罩 —— 与主题无关的物理感取值 */
@@ -119,12 +159,38 @@
     --bg-hover: rgba(255, 255, 255, 0.06);
     --bg-input: #12151c;
 
-    --glass-bg: rgba(24, 28, 38, 0.58);
-    --glass-bg-strong: rgba(28, 32, 43, 0.82);
-    --glass-border: rgba(255, 255, 255, 0.09);
-    --glass-highlight: rgba(255, 255, 255, 0.12);
-    --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
-    --glow-color: var(--theme-glow, color-mix(in srgb, var(--theme-color) 55%, transparent));
+    --glass-bg: color-mix(in srgb, var(--theme-color) 7%, rgba(24, 28, 38, 0.58));
+    --glass-bg-strong: color-mix(in srgb, var(--theme-color) 8%, rgba(26, 30, 40, 0.74));
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-highlight: rgba(255, 255, 255, 0.16);
+    --glass-shadow: var(--elev-2-shadow);
+
+    /* 材质三档（海拔制）— 深色：底色更实一档补偿低环境对比 */
+    --glass-wash-bg: color-mix(in srgb, var(--theme-color) 6%, rgba(22, 25, 33, 0.22));
+    --glass-card-bg: color-mix(in srgb, var(--theme-color) 7%, rgba(24, 28, 38, 0.58));
+    --glass-bar-bg: color-mix(in srgb, var(--theme-color) 8%, rgba(26, 30, 40, 0.74));
+    --glass-wash-border: rgba(255, 255, 255, 0.07);
+    --glass-card-border: rgba(255, 255, 255, 0.09);
+    --glass-bar-border: rgba(255, 255, 255, 0.12);
+
+    /* 浮层档 — 深色模态：同样最实 */
+    --glass-overlay-bg: color-mix(in srgb, var(--theme-color) 5%, rgba(28, 32, 42, 0.92));
+    --glass-overlay-border: rgba(255, 255, 255, 0.12);
+
+    /* 深色海拔阴影 — 影子换纯黑、更重；底暗边同步，立体感靠暗部 */
+    --elev-1-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --elev-2-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+    --elev-3-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), 0 16px 40px -8px rgba(0, 0, 0, 0.6);
+    --elev-4-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 24px 64px -12px rgba(0, 0, 0, 0.7);
+    --edge-shade: rgba(0, 0, 0, 0.4);
+
+    --elev-1-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+    --elev-2-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.25);
+    --elev-3-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+
+    --bg-reading: #10131a;
+
+    --glow-color: color-mix(in srgb, var(--theme-color) 18%, transparent);
 
     --border-DEFAULT: rgba(255, 255, 255, 0.1);
     --border-subtle: rgba(255, 255, 255, 0.06);
@@ -144,6 +210,14 @@
     --orb-1: var(--orb-1-c, color-mix(in srgb, var(--theme-color) 30%, transparent));
     --orb-2: rgba(34, 211, 238, 0.13);
     --orb-3: rgba(147, 96, 255, 0.16);
+
+    /* 状态色深色亮一档（400 系）— 深底上 500 系偏暗，补偿对比度 */
+    --state-error-rgb: 248 113 113;
+    --state-success-rgb: 74 222 128;
+    --state-warning-rgb: 251 191 36;
+    --state-info-rgb: 96 165 250;
+    --state-connected-rgb: 45 212 191;
+    --state-connected-deep-rgb: 45 212 191;
   }
 
   * {
@@ -174,6 +248,11 @@
     position: relative;
     border-radius: 20px;
     overflow: hidden;
+    /* 底色兜底 — 原先 #root 无底色，窗口又被设为 transparent，
+       应用内部整片透明 → 桌面/后方窗口直接透出，后面是深色窗口时整个界面发黑。
+       这里铺 --bg-base：默认主题 #f8f8f7 不透明；玻璃主题自带低不透明度，透出效果不受影响。
+       四角圆角外像素仍为透明，桌面只从圆角透出（既有的圆角窗口观感保留）。 */
+    background: var(--bg-base);
     /* 注意：不能在此加 box-shadow —— #root 填满窗口视口，阴影向外扩散会超出窗口像素被裁剪，透明窗口下不显示 */
   }
   .window-maximized #root {
@@ -193,17 +272,10 @@
     border-radius: 0;
   }
 
-  /* 窗口边框光线 — 跟随主题色的固定发光边框（开屏动画期间隐藏） */
+  /* 窗口边框光线 — 已退役（去 AI 味：光只从功能来，不从装饰来）。
+     原主题色发光边框（inset 双层 box-shadow）整段移除，保留开屏期间隐藏逻辑占位。 */
   #root::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 9999;
-    border-radius: inherit;
-    box-shadow:
-      inset 0 0 0 2px var(--theme-color),
-      inset 0 0 16px 1px color-mix(in srgb, var(--theme-color) 40%, transparent);
+    content: none;
   }
   .startup-active #root::after {
     display: none;
@@ -217,7 +289,8 @@
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--theme-color) 28%, transparent);
+    /* 水彩感选区 — 低透明度让选中文字仍以自身颜色为主，选区只是"一层薄染" */
+    background: color-mix(in srgb, var(--theme-color) 18%, transparent);
   }
 
   /* 触摸高亮 — 禁用默认蓝色方块 */
@@ -225,12 +298,31 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* 输入内凹 — 凹凸对比制造触觉立体：输入是凹的（承接），按钮是凸的（行动）。
+     仅对输入类元素生效，buttons.css 的 button 元素不受影响。 */
+  input:not([type='checkbox']):not([type='radio']),
+  textarea,
+  select {
+    box-shadow: inset 0 1px 2px rgba(31, 45, 74, 0.07);
+  }
+  .dark input:not([type='checkbox']):not([type='radio']),
+  .dark textarea,
+  .dark select {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
   /* 焦点环 — 令牌化：lib/accent.ts 把主色明度归一化后保证对底色 ≥3:1，
-     避免"浅色主色 + 浅色底"时焦点环看不见（原来直接用主色 55% 透明度） */
+     避免"浅色主色 + 浅色底"时焦点环看不见（原来直接用主色 55% 透明度）。
+     outline-color 淡入 — 焦点是"浮现"的，不是"跳出"的（优雅的时间维度）。 */
   :focus-visible {
     outline: 2px solid var(--focus-ring, color-mix(in srgb, var(--theme-color) 55%, transparent));
     outline-offset: 2px;
     border-radius: 6px;
+    animation: focus-in 0.25s ease-out;
+  }
+  @keyframes focus-in {
+    from { outline-color: transparent; }
+    to { outline-color: var(--focus-ring, color-mix(in srgb, var(--theme-color) 55%, transparent)); }
   }
 
   /* 滚动条 — 细巧悬浮 */

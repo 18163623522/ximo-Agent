@@ -141,7 +141,7 @@ export function AboutTab(): React.ReactElement {
         </button>
 
         {updateState === 'up-to-date' && (
-          <div className="flex items-center gap-2 rounded-card border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-400">
+          <div className="flex items-center gap-2 rounded-card border border-state-success/30 bg-state-success/10 px-4 py-2 text-sm text-state-success">
             <CheckCircle size={16} />
             已是最新版本 v{updateInfo.currentVersion}
           </div>
@@ -175,10 +175,10 @@ export function AboutTab(): React.ReactElement {
         )}
 
         {updateState === 'downloaded' && (
-          <div className="rounded-card border border-green-500/30 bg-green-500/10 px-4 py-3">
+          <div className="rounded-card border border-state-success/30 bg-state-success/10 px-4 py-3">
             <div className="flex items-center gap-2">
-              <CheckCircle size={16} className="text-green-400" />
-              <span className="text-sm font-medium text-green-400">
+              <CheckCircle size={16} className="text-state-success" />
+              <span className="text-sm font-medium text-state-success">
                 下载完成，正在启动安装程序...
               </span>
             </div>
@@ -186,7 +186,7 @@ export function AboutTab(): React.ReactElement {
         )}
 
         {updateState === 'error' && (
-          <div className="flex items-center gap-2 rounded-card border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          <div className="flex items-center gap-2 rounded-card border border-state-error/30 bg-state-error/10 px-4 py-2 text-sm text-state-error">
             <AlertCircle size={16} />
             {updateInfo.error ?? '检查更新失败'}
           </div>

@@ -192,7 +192,7 @@ export function ComponentPicker(): React.ReactElement {
                   <span key={c.id} className="chip flex items-center gap-0.5 px-1.5 py-0 text-caption text-accent border-accent/30 bg-accent/10">
                     <Box size={11} />
                     {c.nameCn}
-                    <button onClick={(e) => { e.stopPropagation(); toggleComponent(c.id) }} className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]">
+                    <button onClick={(e) => { e.stopPropagation(); toggleComponent(c.id) }} className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]">
                       <X size={11} />
                     </button>
                   </span>
@@ -200,7 +200,7 @@ export function ComponentPicker(): React.ReactElement {
                 {selectedComponentIds.length > 4 && (
                   <span className="text-caption text-text-muted">+{selectedComponentIds.length - 4}</span>
                 )}
-                <button onClick={() => clearSelectedComponents()} className="ml-1 text-caption text-text-muted hover:text-red-400 transition-colors active:scale-[0.97]">
+                <button onClick={() => clearSelectedComponents()} className="ml-1 text-caption text-text-muted hover:text-state-error transition-colors active:scale-[0.97]">
                   清空
                 </button>
               </div>

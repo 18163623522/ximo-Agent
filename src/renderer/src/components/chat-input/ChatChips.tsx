@@ -51,7 +51,7 @@ export function ChatChips({
               <span key={f} className="chip px-2 py-0.5 text-caption text-accent animate-scale-in">
                 {isImage ? <ImageIcon size={11} /> : <Paperclip size={11} />}
                 {name}
-                <button onClick={() => onRemoveFile(f)} className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]">
+                <button onClick={() => onRemoveFile(f)} className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]">
                   <X size={11} />
                 </button>
               </span>
@@ -69,7 +69,7 @@ export function ChatChips({
             return (
               <span key={id} className="chip flex items-center gap-1 px-2 py-0.5 text-caption text-accent border-accent/30 bg-accent/10 animate-scale-in">
                 {agent.emoji} {agent.name}
-                <button onClick={() => onToggleExpert(id)} className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]">
+                <button onClick={() => onToggleExpert(id)} className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]">
                   <X size={11} />
                 </button>
               </span>
@@ -84,7 +84,7 @@ export function ChatChips({
           <span className="chip flex items-center gap-1 px-2 py-0.5 text-caption text-accent border-accent/30 bg-accent/10 animate-scale-in">
             <Palette size={11} />
             {activeStyle.name}
-            <button aria-label="解除风格绑定" onClick={onClearStyle} className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]" title="解除风格绑定">
+            <button aria-label="解除风格绑定" onClick={onClearStyle} className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]" title="解除风格绑定">
               <X size={11} />
             </button>
           </span>
@@ -98,12 +98,12 @@ export function ChatChips({
             <span key={c.id} className="chip flex items-center gap-1 px-2 py-0.5 text-caption text-accent border-accent/30 bg-accent/10 animate-scale-in">
               <Box size={11} />
               {c.nameCn}
-              <button onClick={() => onToggleComponent(c.id)} className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]" title="移除组件">
+              <button onClick={() => onToggleComponent(c.id)} className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]" title="移除组件">
                 <X size={11} />
               </button>
             </span>
           ))}
-          <button onClick={onClearComponents} className="text-caption text-text-muted hover:text-red-400 transition-colors px-1 active:scale-[0.97]">
+          <button onClick={onClearComponents} className="text-caption text-text-muted hover:text-state-error transition-colors px-1 active:scale-[0.97]">
             清空
           </button>
         </div>
@@ -119,7 +119,7 @@ export function ChatChips({
             {activeSlashCmd.cmd.replace(/^\//, '')}
             <button aria-label="移除"
               onClick={onClearSlashCmd}
-              className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]"
+              className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]"
               title="移除"
             >
               <X size={11} />

@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import { transcribeLocal } from './stt-local'
+import { transcribeLocal, releaseTranscriber } from './stt-local'
 import { synthesize, listVoices } from './edge-tts'
 
 /** 向主窗口发送事件 */
@@ -31,5 +31,10 @@ export function registerVoiceHandlers(): void {
   // Edge TTS — 获取可用音色列表
   ipcMain.handle('voice:tts:voices', async () => {
     return await listVoices()
+  })
+
+  // 释放已加载的 Whisper 模型（关闭语音讨论时回收内存）
+  ipcMain.handle('voice:stt:release', async () => {
+    return { released: await releaseTranscriber() }
   })
 }

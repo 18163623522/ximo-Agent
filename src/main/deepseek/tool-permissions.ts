@@ -18,10 +18,19 @@ export function clearRejectedCache(): void {
   rejectedCache.clear()
 }
 
+/** 会话内拒绝缓存查询 — 子 Agent 权限检查复用（与主链路共享同一份缓存） */
+export function isPreviouslyRejected(toolName: string, args: Record<string, unknown>): boolean {
+  return rejectedCache.has(makeRejectKey(toolName, args))
+}
+
+/** 写入会话内拒绝缓存 — 用户拒绝后同会话内不再重复询问 */
+export function rememberRejected(toolName: string, args: Record<string, unknown>): void {
+  rejectedCache.add(makeRejectKey(toolName, args))
+}
+
 /** 生成工具调用的缓存 key — 工具名 + 参数摘要前 100 字符 */
-function makeRejectKey(tc: ToolCall): string {
-  const argStr = JSON.stringify(tc.arguments).slice(0, 100)
-  return `${tc.name}:${argStr}`
+function makeRejectKey(toolName: string, args: Record<string, unknown>): string {
+  return `${toolName}:${JSON.stringify(args).slice(0, 100)}`
 }
 
 /** 权限评估结果：被取消的工具调用 ID 集合 */
@@ -54,7 +63,7 @@ export async function checkPermissions(
       messages.push({ role: 'tool', content: 'Error: 权限拒绝：该工具在当前模式下不可用', tool_call_id: tc.id })
     } else if (decision === 'ask') {
       // 审批拒绝持久化 — 检查用户是否已在本次会话中拒绝过相同操作
-      const rejectKey = makeRejectKey(tc)
+      const rejectKey = makeRejectKey(tc.name, tc.arguments)
       if (rejectedCache.has(rejectKey)) {
         cancelledIds.add(tc.id)
         const cancelledResult: ToolResult = {

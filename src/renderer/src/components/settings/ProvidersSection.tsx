@@ -156,7 +156,7 @@ export function ProvidersSection({
                 </button>
                 <button
                   onClick={() => removeProvider(p.id)}
-                  className="rounded-control p-1.5 text-text-muted transition-colors hover:text-red-400 active:scale-[0.97]"
+                  className="rounded-control p-1.5 text-text-muted transition-colors hover:text-state-error active:scale-[0.97]"
                   title="删除"
                 >
                   <Trash2 size={13} />
@@ -172,7 +172,7 @@ export function ProvidersSection({
                     <Loader2 size={11} className="animate-spin" /> 测试中...
                   </p>
                 ) : (
-                  <p className={`flex items-center gap-1.5 text-caption ${t.result.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <p className={`flex items-center gap-1.5 text-caption ${t.result.success ? 'text-state-success' : 'text-state-error'}`}>
                     {t.result.success ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
                     {t.result.message}
                     {t.result.latency !== undefined ? ` · ${t.result.latency}ms` : ''}

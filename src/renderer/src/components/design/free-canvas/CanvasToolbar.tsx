@@ -111,7 +111,7 @@ export function CanvasToolbar({
       {canvasItems.length > 0 && (
         <button aria-label="清空画布"
           onClick={onClearCanvas}
-          className="icon-btn rounded-card p-1 text-text-muted hover:text-red-400"
+          className="icon-btn rounded-card p-1 text-text-muted hover:text-state-error"
           title="清空画布"
         >
           <Trash2 size={13} />

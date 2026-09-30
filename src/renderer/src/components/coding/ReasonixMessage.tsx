@@ -116,7 +116,7 @@ function CollapsedInlineResults({ results }: { results: ToolResult[] }): React.R
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-bg-hover-soft active:scale-[0.97]"
       >
-        <CheckCircle size={13} className="text-green-500/70 shrink-0" />
+        <CheckCircle size={13} className="text-state-success/70 shrink-0" />
         <span className="text-text-secondary shrink-0">文件变更</span>
         <span className="text-text-muted">{rendered.length}</span>
         {summaryText && (

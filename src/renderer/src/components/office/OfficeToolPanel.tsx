@@ -108,18 +108,18 @@ export function OfficeToolPanel(): React.ReactElement {
     <div className="glass flex w-72 flex-col border-l border-border-subtle overflow-y-auto">
       {/* 录制状态指示器 */}
       {isRecording && (
-        <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 animate-pulse-subtle">
+        <div className="px-3 py-2 bg-state-error/10 border-b border-state-error/20 animate-pulse-subtle">
           <div className="flex items-center gap-2">
             <div className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-state-error opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-state-error" />
             </div>
-            <span className="text-xs font-medium text-red-400">rrweb 录制中</span>
-            <span className="text-caption text-red-400/70 ml-auto">{recordingStepCount} 步 · {rrwebEventCount} 事件</span>
+            <span className="text-xs font-medium text-state-error">rrweb 录制中</span>
+            <span className="text-caption text-state-error/70 ml-auto">{recordingStepCount} 步 · {rrwebEventCount} 事件</span>
           </div>
           <button
             onClick={handleStopRecording}
-            className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-card bg-red-500/20 hover:bg-red-500/30 px-3 py-1.5 text-xs text-red-400 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] active:scale-[0.97]"
+            className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-card bg-state-error/20 hover:bg-state-error/30 px-3 py-1.5 text-xs text-state-error transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] active:scale-[0.97]"
           >
             <Square size={11} />
             停止录制并生成技能
@@ -168,7 +168,7 @@ export function OfficeToolPanel(): React.ReactElement {
                 </button>
                 <button
                   onClick={() => void handleDeleteSkill(skill.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity icon-btn rounded-control p-1 text-text-muted hover:text-red-400"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity icon-btn rounded-control p-1 text-text-muted hover:text-state-error"
                   title="删除技能"
                 >
                   <span className="text-caption">×</span>

@@ -30,7 +30,7 @@ export function ModeToolbars({
           {projectPath ? projectPath.split(/[/\\]/).pop() : '打开项目'}
         </button>
         {projectPath && (
-          <button aria-label="解除项目绑定" onClick={onClearProject} className="text-caption text-text-muted hover:text-red-400 transition-colors active:scale-[0.97]" title="解除项目绑定">
+          <button aria-label="解除项目绑定" onClick={onClearProject} className="text-caption text-text-muted hover:text-state-error transition-colors active:scale-[0.97]" title="解除项目绑定">
             <X size={11} />
           </button>
         )}

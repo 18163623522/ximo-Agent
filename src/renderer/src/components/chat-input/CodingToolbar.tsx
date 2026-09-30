@@ -24,7 +24,7 @@ export function CodingToolbar({
       {projectPath && (
         <button
           onClick={() => setProjectPath('')}
-          className="text-caption text-text-muted hover:text-red-400 transition-colors active:scale-[0.97]"
+          className="text-caption text-text-muted hover:text-state-error transition-colors active:scale-[0.97]"
           title="解除项目绑定"
         >
           <X size={11} />

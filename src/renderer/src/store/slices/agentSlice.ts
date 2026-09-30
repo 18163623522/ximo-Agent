@@ -7,6 +7,7 @@ export type AgentSlice = Pick<StoreState,
   | 'showKnowledgePanel'
   | 'showMcpPanel'
   | 'showSkillPanel'
+  | 'showAgentSystemPanel'
   | 'activeExperts'
   | 'agentTodosByConv'
   | 'taskListCollapsedByConv'
@@ -20,6 +21,7 @@ export type AgentSlice = Pick<StoreState,
   | 'setShowKnowledgePanel'
   | 'setShowMcpPanel'
   | 'setShowSkillPanel'
+  | 'setShowAgentSystemPanel'
   | 'setRightPanelCollapsed'
   | 'toggleRightPanel'
   | 'openOfficePanel'
@@ -30,6 +32,7 @@ export type AgentSlice = Pick<StoreState,
   | 'restoreAgentTodos'
   | 'markTodosComplete'
   | 'editMessage'
+  | 'setPendingDraft'
   | 'clearDraft'
   | 'setShowTokenStats'
 >
@@ -40,6 +43,7 @@ export const createAgentSlice: StateCreator<StoreState, [], [], AgentSlice> = (s
   showKnowledgePanel: false,
   showMcpPanel: false,
   showSkillPanel: false,
+  showAgentSystemPanel: false,
   activeExperts: [],
   agentTodosByConv: {},
   taskListCollapsedByConv: {},
@@ -60,6 +64,8 @@ export const createAgentSlice: StateCreator<StoreState, [], [], AgentSlice> = (s
   setShowMcpPanel: (show) => set({ showMcpPanel: show }),
 
   setShowSkillPanel: (show) => set({ showSkillPanel: show }),
+
+  setShowAgentSystemPanel: (show) => set({ showAgentSystemPanel: show }),
 
   toggleExpert: (expertId) => set((s) => ({
     activeExperts: s.activeExperts.includes(expertId)
@@ -141,6 +147,8 @@ export const createAgentSlice: StateCreator<StoreState, [], [], AgentSlice> = (s
     get().restoreAgentTodos()
     void get()._persist()
   },
+
+  setPendingDraft: (text) => set({ pendingDraft: { text } }),
 
   clearDraft: () => set({ pendingDraft: null }),
 

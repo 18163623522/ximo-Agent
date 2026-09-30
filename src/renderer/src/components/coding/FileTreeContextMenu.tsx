@@ -321,7 +321,7 @@ function MenuItem({
       onClick={onClick}
       disabled={disabled}
       className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors hover:bg-bg-hover disabled:opacity-30 disabled:cursor-not-allowed ${
-        danger ? 'text-red-400 hover:bg-red-500/10' : 'text-text-primary'
+        danger ? 'text-state-error hover:bg-state-error/10' : 'text-text-primary'
       }`}
     >
       <Icon size={13} className="shrink-0" />

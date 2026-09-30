@@ -180,7 +180,7 @@ export function StylePicker(): React.ReactElement {
                 <span className="chip flex items-center gap-0.5 px-1.5 py-0 text-caption text-accent border-accent/30 bg-accent/10">
                   <Palette size={11} />
                   {activeStyle.name}
-                  <button onClick={(e) => { e.stopPropagation(); setActiveStyleId(null) }} className="ml-0.5 hover:text-red-400 transition-colors active:scale-[0.97]">
+                  <button onClick={(e) => { e.stopPropagation(); setActiveStyleId(null) }} className="ml-0.5 hover:text-state-error transition-colors active:scale-[0.97]">
                     <X size={11} />
                   </button>
                 </span>

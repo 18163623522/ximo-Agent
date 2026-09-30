@@ -40,7 +40,7 @@ export function MainAgentExpertPicker({ selectedId, onSelect }: {
           {selected && (
             <button
               onClick={() => onSelect(undefined)}
-              className="rounded-card px-2 py-1 text-xs text-text-muted hover:text-red-400 transition-colors active:scale-[0.97]"
+              className="rounded-card px-2 py-1 text-xs text-text-muted hover:text-state-error transition-colors active:scale-[0.97]"
             >
               清除
             </button>

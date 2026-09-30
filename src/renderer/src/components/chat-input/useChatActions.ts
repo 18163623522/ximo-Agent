@@ -30,9 +30,11 @@ interface UseChatActionsResult {
   hasSkillCommands: boolean
   showFileMention: boolean
   matchedFiles: ReturnType<typeof useFileMention>['matchedFiles']
+  desktopMentionAvailable: boolean
   selectedMentionIndex: number
   setSelectedMentionIndex: (i: number) => void
   insertFileMention: (filePath: string) => void
+  insertDesktopMention: () => void
   handleMentionKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => boolean
   isDragOver: boolean
   handleDragOver: ReturnType<typeof usePasteAndDrag>['handleDragOver']
@@ -63,7 +65,7 @@ export function useChatActions(
   const [agentsReady, setAgentsReady] = useState(false)
   const [activeSlashCmd, setActiveSlashCmd] = useState<{ cmd: string; systemHint: string } | null>(null)
 
-  const { showFileMention, matchedFiles, selectedMentionIndex, setSelectedMentionIndex, insertFileMention, handleMentionKeyDown } =
+  const { showFileMention, matchedFiles, desktopMentionAvailable, selectedMentionIndex, setSelectedMentionIndex, insertFileMention, insertDesktopMention, handleMentionKeyDown } =
     useFileMention(textareaRef, text, setText, currentMode, projectPath)
   const { isDragOver, handleDragOver, handleDragLeave, handleDrop } =
     usePasteAndDrag(isStreaming, pastedImagePaths, addAttachedFile, addPastedImage, clearPastedImages)
@@ -159,8 +161,8 @@ export function useChatActions(
   return {
     text, setText, textareaRef, showSlashMenu, activeSlashCmd, setActiveSlashCmd,
     slashCommands, hasSkillCommands,
-    showFileMention, matchedFiles, selectedMentionIndex, setSelectedMentionIndex,
-    insertFileMention, handleMentionKeyDown,
+    showFileMention, matchedFiles, desktopMentionAvailable, selectedMentionIndex, setSelectedMentionIndex,
+    insertFileMention, insertDesktopMention, handleMentionKeyDown,
     isDragOver, handleDragOver, handleDragLeave, handleDrop,
     handleSend, handleKeyDown, handleSlashCommand, handleAttachFile,
   }

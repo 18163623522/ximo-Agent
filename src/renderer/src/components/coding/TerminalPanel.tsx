@@ -80,9 +80,9 @@ export function TerminalPanel({ command: agentCommand, output: agentOutput, cwd 
       <div className="bg-[#0d1117]/95">
         {/* 终端标题栏 */}
         <div className="flex items-center gap-1.5 px-4 py-1.5 border-b border-border-subtle-soft">
-          <span className="h-2 w-2 rounded-full bg-red-500/80" />
+          <span className="h-2 w-2 rounded-full bg-state-error/80" />
           <span className="h-2 w-2 rounded-full bg-yellow-500/80" />
-          <span className="h-2 w-2 rounded-full bg-green-500/80" />
+          <span className="h-2 w-2 rounded-full bg-state-success/80" />
           <span className="ml-2 text-caption text-text-muted">终端</span>
           {agentCommand && <span className="ml-3 text-caption text-text-muted font-mono truncate">$ {agentCommand}</span>}
         </div>
@@ -92,7 +92,7 @@ export function TerminalPanel({ command: agentCommand, output: agentOutput, cwd 
           {agentOutput && (
             <div className="mb-2">
               <div className="text-text-muted text-caption">[Agent]</div>
-              <pre className="whitespace-pre-wrap break-all text-green-400">{agentOutput}</pre>
+              <pre className="whitespace-pre-wrap break-all text-state-success">{agentOutput}</pre>
             </div>
           )}
           {/* 用户手动执行的命令历史 */}
@@ -102,7 +102,7 @@ export function TerminalPanel({ command: agentCommand, output: agentOutput, cwd 
                 <span className="text-text-muted">$</span> {entry.command}
               </div>
               {entry.output && (
-                <pre className={`whitespace-pre-wrap break-all ${entry.exitCode === 0 ? 'text-text-secondary' : 'text-red-400'}`}>
+                <pre className={`whitespace-pre-wrap break-all ${entry.exitCode === 0 ? 'text-text-secondary' : 'text-state-error'}`}>
                   {entry.output}
                 </pre>
               )}

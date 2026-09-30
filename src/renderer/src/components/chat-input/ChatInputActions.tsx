@@ -93,7 +93,7 @@ export function ChatInputActions({
         {isStreaming ? (
           <button aria-label="取消"
             onClick={onCancel}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_0_14px_rgba(239,68,68,0.45)] transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast hover:bg-red-600 hover:scale-105 active:scale-90 halo-pulse"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-state-error text-white shadow-[0_0_14px_rgba(239,68,68,0.45)] transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast hover:bg-state-error hover:scale-105 active:scale-90 halo-pulse"
             title="取消"
           >
             <Square size={13} />
@@ -107,7 +107,7 @@ export function ChatInputActions({
             }`}
             title="发送"
           >
-            <ArrowUp size={16} strokeWidth={2} />
+            <ArrowUp size={16} />
           </button>
         )}
       </div>

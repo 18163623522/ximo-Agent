@@ -52,6 +52,22 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'todo_write' },
     { tool: 'create_tool' },
     { tool: 'knowledge' },
+    { tool: 'virtual_desktop' },
+    // WSL 隔离桌面 — 画面/交互类操作自动允许（exec/launch 在 ask 列表）
+    { tool: 'wsl_desktop', subject: 'screenshot' },
+    { tool: 'wsl_desktop', subject: 'click' },
+    { tool: 'wsl_desktop', subject: 'double_click' },
+    { tool: 'wsl_desktop', subject: 'mouse_move' },
+    { tool: 'wsl_desktop', subject: 'drag' },
+    { tool: 'wsl_desktop', subject: 'scroll' },
+    { tool: 'wsl_desktop', subject: 'key_press' },
+    { tool: 'wsl_desktop', subject: 'key_down' },
+    { tool: 'wsl_desktop', subject: 'key_up' },
+    { tool: 'wsl_desktop', subject: 'type' },
+    { tool: 'wsl_desktop', subject: 'paste' },
+    { tool: 'wsl_desktop', subject: 'clipboard_read' },
+    { tool: 'wsl_desktop', subject: 'window_list' },
+    { tool: 'wsl_desktop', subject: 'window_op' },
     // 编程基础写操作 — 直接执行（有 checkpoint 回退保障）
     { tool: 'file_write' },
     { tool: 'file_edit' },
@@ -64,6 +80,11 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'git_operations' },
     { tool: 'code_execute' },
     { tool: 'file_delete' },
+    // WSL 桌面内执行命令/启动应用 — 等同 terminal_exec 审批级别
+    { tool: 'wsl_desktop', subject: 'exec' },
+    { tool: 'wsl_desktop', subject: 'launch' },
+    // 改分辨率会重启桌面、关闭所有窗口 — 按不可逆操作对待
+    { tool: 'wsl_desktop', subject: 'set_resolution' },
   ],
   deny: [
     // 禁止的操作（编程模式不需要）
@@ -84,6 +105,11 @@ export const SAFE_CONFIG: PermissionConfig = {
   allow: [],
   ask: [
     { tool: 'file_delete' },
+    // WSL 桌面内执行命令/启动应用 — 等同 terminal_exec 审批级别（画面/交互类走默认放行）
+    { tool: 'wsl_desktop', subject: 'exec' },
+    { tool: 'wsl_desktop', subject: 'launch' },
+    // 改分辨率会重启桌面、关闭所有窗口 — 按不可逆操作对待（与 coding/office 同级）
+    { tool: 'wsl_desktop', subject: 'set_resolution' },
   ],
   deny: [
     { tool: 'act_ui' },
@@ -106,6 +132,22 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'todo_write' },
     { tool: 'create_tool' },
     { tool: 'knowledge' },
+    { tool: 'virtual_desktop' },
+    // WSL 隔离桌面 — 画面/交互类操作自动允许（exec/launch 在 ask 列表）
+    { tool: 'wsl_desktop', subject: 'screenshot' },
+    { tool: 'wsl_desktop', subject: 'click' },
+    { tool: 'wsl_desktop', subject: 'double_click' },
+    { tool: 'wsl_desktop', subject: 'mouse_move' },
+    { tool: 'wsl_desktop', subject: 'drag' },
+    { tool: 'wsl_desktop', subject: 'scroll' },
+    { tool: 'wsl_desktop', subject: 'key_press' },
+    { tool: 'wsl_desktop', subject: 'key_down' },
+    { tool: 'wsl_desktop', subject: 'key_up' },
+    { tool: 'wsl_desktop', subject: 'type' },
+    { tool: 'wsl_desktop', subject: 'paste' },
+    { tool: 'wsl_desktop', subject: 'clipboard_read' },
+    { tool: 'wsl_desktop', subject: 'window_list' },
+    { tool: 'wsl_desktop', subject: 'window_op' },
     { tool: 'theme_design' },
   ],
   ask: [
@@ -122,6 +164,11 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'dependency_check' },
     { tool: 'browser_execute_js' },
     { tool: 'network_replay' },
+    // WSL 桌面内执行命令/启动应用 — 等同 terminal_exec 审批级别
+    { tool: 'wsl_desktop', subject: 'exec' },
+    { tool: 'wsl_desktop', subject: 'launch' },
+    // 改分辨率会重启桌面、关闭所有窗口 — 按不可逆操作对待
+    { tool: 'wsl_desktop', subject: 'set_resolution' },
   ],
   deny: []
 }
@@ -192,6 +239,8 @@ export function extractSubject(toolName: string, args: Record<string, unknown>):
     case 'terminal_exec':
       return (args.command as string) || ''
     case 'git_operations':
+      return (args.action as string) || ''
+    case 'wsl_desktop':
       return (args.action as string) || ''
     case 'file_delete':
       return (args.filePath as string) || ''

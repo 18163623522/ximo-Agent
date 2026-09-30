@@ -156,7 +156,7 @@ export function KnowledgePanel(): React.ReactElement | null {
                     </div>
                     <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button onClick={() => { setEditing(item); setShowForm(true) }} className="rounded-control p-1 text-text-muted hover:bg-bg-hover hover:text-accent active:scale-[0.97]" title="编辑"><Pencil size={13} /></button>
-                      <button onClick={() => void handleDelete(item.id)} className="rounded-control p-1 text-text-muted hover:bg-bg-hover hover:text-red-400 active:scale-[0.97]" title="删除"><Trash2 size={13} /></button>
+                      <button onClick={() => void handleDelete(item.id)} className="rounded-control p-1 text-text-muted hover:bg-bg-hover hover:text-state-error active:scale-[0.97]" title="删除"><Trash2 size={13} /></button>
                     </div>
                   </div>
                 </div>

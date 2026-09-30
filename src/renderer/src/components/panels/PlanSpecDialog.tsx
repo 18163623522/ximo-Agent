@@ -166,14 +166,14 @@ export function PlanSpecDialog(): React.ReactElement | null {
             <div className="mt-3 grid grid-cols-2 gap-3">
               <button
                 onClick={handleAccept}
-                className="flex items-center justify-center gap-2 rounded-panel border-2 border-green-500/30 bg-green-500/10 px-4 py-3 text-sm font-medium text-green-400 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast hover:border-green-500/50 hover:bg-green-500/15 active:scale-[0.98]"
+                className="flex items-center justify-center gap-2 rounded-panel border-2 border-state-success/30 bg-state-success/10 px-4 py-3 text-sm font-medium text-state-success transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast hover:border-state-success/50 hover:bg-state-success/15 active:scale-[0.98]"
               >
                 <CheckCircle2 size={16} />
                 接受方案
               </button>
               <button
                 onClick={handleDecline}
-                className="flex items-center justify-center gap-2 rounded-panel border-2 border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast hover:border-red-500/50 hover:bg-red-500/15 active:scale-[0.98]"
+                className="flex items-center justify-center gap-2 rounded-panel border-2 border-state-error/30 bg-state-error/10 px-4 py-3 text-sm font-medium text-state-error transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-fast hover:border-state-error/50 hover:bg-state-error/15 active:scale-[0.98]"
               >
                 <XCircle size={16} />
                 拒绝方案
@@ -223,7 +223,7 @@ export function PlanSpecDialog(): React.ReactElement | null {
             <>
               <button
                 onClick={handleClose}
-                className="flex items-center gap-1.5 rounded-card border border-border bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/30 active:scale-95"
+                className="flex items-center gap-1.5 rounded-card border border-border bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:bg-state-error/10 hover:text-state-error hover:border-state-error/30 active:scale-95"
               >
                 <XCircle size={13} />
                 跳过
@@ -249,7 +249,7 @@ export function PlanSpecDialog(): React.ReactElement | null {
             <>
               <button
                 onClick={handleReject}
-                className="flex items-center gap-1.5 rounded-card border border-border bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/30 active:scale-95"
+                className="flex items-center gap-1.5 rounded-card border border-border bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:bg-state-error/10 hover:text-state-error hover:border-state-error/30 active:scale-95"
               >
                 <XCircle size={13} />
                 跳过此问题
@@ -267,7 +267,7 @@ export function PlanSpecDialog(): React.ReactElement | null {
             <>
               <button
                 onClick={handleReject}
-                className="flex items-center gap-1.5 rounded-card border border-border bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/30 active:scale-95"
+                className="flex items-center gap-1.5 rounded-card border border-border bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:bg-state-error/10 hover:text-state-error hover:border-state-error/30 active:scale-95"
               >
                 <XCircle size={13} />
                 打回修改

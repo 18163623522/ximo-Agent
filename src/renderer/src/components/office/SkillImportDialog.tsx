@@ -94,7 +94,7 @@ AI 指令内容...`}</pre>
 
         {/* 错误提示 */}
         {importError && (
-          <p className="mt-2 text-caption text-red-400">{importError}</p>
+          <p className="mt-2 text-caption text-state-error">{importError}</p>
         )}
 
         {/* 操作按钮 */}

@@ -88,7 +88,7 @@ export function UrlBar({ tab, urlInputRef, onNavigate, onKeyDown, onBack, onForw
       <button onClick={() => onNavigate(urlInputRef.current?.value || tab?.url || '')} className="icon-btn rounded-control p-1" title="前往">
         <Search size={13} />
       </button>
-      <button aria-label="关闭浏览器" onClick={onClose} className="icon-btn rounded-control p-1 text-red-400 hover:text-red-500" title="关闭浏览器">
+      <button aria-label="关闭浏览器" onClick={onClose} className="icon-btn rounded-control p-1 text-state-error hover:text-state-error" title="关闭浏览器">
         <X size={13} />
       </button>
     </div>
@@ -104,14 +104,14 @@ interface RecordingBarProps {
 /** 录制状态栏 */
 export function RecordingBar({ eventCount, requestCount, onStop }: RecordingBarProps): React.ReactElement {
   return (
-    <div className="flex items-center gap-2 border-b border-red-500/20 bg-red-500/8 px-2 py-1 shrink-0">
+    <div className="flex items-center gap-2 border-b border-state-error/20 bg-state-error/8 px-2 py-1 shrink-0">
       <div className="relative flex h-2.5 w-2.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-state-error opacity-75" />
+        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-state-error" />
       </div>
-      <span className="text-caption font-medium text-red-400">录制中</span>
-      <span className="text-caption text-red-400/70">{eventCount} 步 · {requestCount} 个请求</span>
-      <button onClick={onStop} className="ml-auto rounded-control bg-red-500/20 px-2 py-0.5 text-caption font-medium text-red-400 hover:bg-red-500/30 transition-colors active:scale-[0.97]">
+      <span className="text-caption font-medium text-state-error">录制中</span>
+      <span className="text-caption text-state-error/70">{eventCount} 步 · {requestCount} 个请求</span>
+      <button onClick={onStop} className="ml-auto rounded-control bg-state-error/20 px-2 py-0.5 text-caption font-medium text-state-error hover:bg-state-error/30 transition-colors active:scale-[0.97]">
         停止并保存
       </button>
     </div>

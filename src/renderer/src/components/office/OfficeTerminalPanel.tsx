@@ -73,7 +73,7 @@ export function OfficeTerminalPanel(): React.ReactElement {
               <span className="text-text-muted">$ </span>{e.command}
             </div>
             {e.stdout && <pre className="whitespace-pre-wrap break-all text-text-secondary">{e.stdout}</pre>}
-            {e.stderr && <pre className="whitespace-pre-wrap break-all text-red-400">{e.stderr}</pre>}
+            {e.stderr && <pre className="whitespace-pre-wrap break-all text-state-error">{e.stderr}</pre>}
             {e.exitCode !== 0 && <div className="text-caption text-text-muted">exit {e.exitCode}</div>}
           </div>
         ))}

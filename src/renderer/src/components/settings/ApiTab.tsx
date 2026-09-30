@@ -42,12 +42,12 @@ export function ApiTab({
           <label className="text-sm font-medium text-text-primary">API Key</label>
           <span
             className={`flex items-center gap-1 text-xs ${
-              keyConfigured ? 'text-emerald-400' : 'text-text-muted'
+              keyConfigured ? 'text-state-success' : 'text-text-muted'
             }`}
           >
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                keyConfigured ? 'bg-emerald-400' : 'bg-text-muted'
+                keyConfigured ? 'bg-state-success' : 'bg-text-muted'
               }`}
             />
             {keyConfigured ? '已配置' : '未配置'}
@@ -121,8 +121,8 @@ export function ApiTab({
           <div
             className={`flex items-start gap-2 rounded-panel p-3 text-xs ${
               testResult.success
-                ? 'bg-emerald-500/10 text-emerald-400'
-                : 'bg-red-500/10 text-red-400'
+                ? 'bg-state-success/10 text-state-success'
+                : 'bg-state-error/10 text-state-error'
             }`}
           >
             {testResult.success ? (

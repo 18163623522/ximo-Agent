@@ -66,6 +66,22 @@ export async function buildUserMessage(params: BuildUserMessageParams): Promise<
     clearSelectedComponents = true
   }
 
+  // @Agent系统桌面 提及 — 自动确保隔离桌面已启动，并把任务路由给桌面 Agent。
+  // 桌面画面在右侧栏「Agent 桌面」面板实时可视，操作过程经工具卡在主聊天展示
+  if (trimmed.includes('@Agent系统桌面')) {
+    let desktopNote = ''
+    try {
+      const state = await window.api.workspace.state()
+      if (!state.running) {
+        await window.api.workspace.start()
+        desktopNote = '（桌面原本未启动，已自动为你启动）'
+      }
+    } catch {
+      desktopNote = '（⚠️ 桌面自动启动失败，请打开右侧「Agent 桌面」面板查看原因后再试）'
+    }
+    trimmed = `${trimmed}\n\n🖥️ 【桌面任务】${desktopNote}请使用 wsl_desktop 工具在 Agent 隔离图形桌面（分辨率 1280x800，带底部任务栏和终端）中替用户完成上述请求。桌面内缺少的软件可用命令自行安装。每步操作后用 wsl_desktop(action="screenshot") 截图确认结果，必要时配合 vision_analyze 分析画面。`
+  }
+
   // @file 引用解析 — 直接读取文件内容注入上下文
   const mentionMatches = [...trimmed.matchAll(/@([^\s@]+\.\w+)/g)]
   if (mentionMatches.length > 0 && params.projectPath) {

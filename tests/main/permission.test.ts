@@ -280,4 +280,31 @@ expect(evaluate(SAFE_CONFIG, 'file_delete', '')).toBe('ask')
       expect(OFFICE_DEFAULT_CONFIG.deny).toEqual([])
     })
   })
+
+  describe('wsl_desktop — action 级权限', () => {
+    it('extractSubject 提取 action', () => {
+      expect(extractSubject('wsl_desktop', { action: 'exec' })).toBe('exec')
+      expect(extractSubject('wsl_desktop', {})).toBe('')
+    })
+
+    it('画面/交互类操作自动允许', () => {
+      for (const action of ['screenshot', 'click', 'double_click', 'mouse_move', 'key_press', 'type']) {
+        expect(evaluate(OFFICE_DEFAULT_CONFIG, 'wsl_desktop', action)).toBe('allow')
+        expect(evaluate(CODING_DEFAULT_CONFIG, 'wsl_desktop', action)).toBe('allow')
+      }
+    })
+
+    it('exec/launch 需要确认（堵住绕过 terminal_exec 审批的口子）', () => {
+      expect(evaluate(OFFICE_DEFAULT_CONFIG, 'wsl_desktop', 'exec')).toBe('ask')
+      expect(evaluate(OFFICE_DEFAULT_CONFIG, 'wsl_desktop', 'launch')).toBe('ask')
+      expect(evaluate(CODING_DEFAULT_CONFIG, 'wsl_desktop', 'exec')).toBe('ask')
+      expect(evaluate(CODING_DEFAULT_CONFIG, 'wsl_desktop', 'launch')).toBe('ask')
+    })
+
+    it('SAFE 模式下 exec/launch 也需要确认，画面类走默认放行', () => {
+      expect(evaluate(SAFE_CONFIG, 'wsl_desktop', 'exec')).toBe('ask')
+      expect(evaluate(SAFE_CONFIG, 'wsl_desktop', 'launch')).toBe('ask')
+      expect(evaluate(SAFE_CONFIG, 'wsl_desktop', 'screenshot')).toBe('allow')
+    })
+  })
 })

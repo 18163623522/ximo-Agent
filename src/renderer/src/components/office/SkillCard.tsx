@@ -43,7 +43,7 @@ export function SkillCard({ skill, expanded, onToggleExpand, onToggleEnabled, on
           onClick={onToggleEnabled}
           className={`icon-btn rounded-control p-1 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] ${
             skill.enabled
-              ? 'text-green-400 hover:bg-green-400/10'
+              ? 'text-state-success hover:bg-state-success/10'
               : 'text-text-muted hover:bg-bg-hover'
           }`}
           title={skill.enabled ? '已启用 — 点击禁用' : '已禁用 — 点击启用'}
@@ -54,7 +54,7 @@ export function SkillCard({ skill, expanded, onToggleExpand, onToggleEnabled, on
         {/* 删除 */}
         <button aria-label="删除"
           onClick={onDelete}
-          className="icon-btn rounded-control p-1 text-text-muted opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:text-red-400 group-hover:opacity-100"
+          className="icon-btn rounded-control p-1 text-text-muted opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:text-state-error group-hover:opacity-100"
           title="删除"
         >
           <Trash2 size={11} />

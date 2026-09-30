@@ -55,34 +55,31 @@ export function checkWriteAccess(filePath: string): { allowed: boolean; reason?:
 
 // ---------- 敏感文件读取兜底 ----------
 
-/** 敏感文件路径模式 — 阻止 Agent 读取用户凭据 */
+/** 敏感文件路径模式 — 阻止 Agent 读取用户凭据
+ *  路径分隔符跨平台兼容：正则中 [\\/] 匹配正斜杠和反斜杠 */
 const SENSITIVE_FILE_PATTERNS = [
-  /\.ssh\//i,           // SSH 密钥目录
-  /\/\.ssh\//i,
-  /\.ssh\\/i,
-  /id_rsa/i,            // SSH 私钥
+  /\.ssh[\\/]/i,           // SSH 密钥目录
+  /id_rsa/i,                // SSH 私钥
   /id_ecdsa/i,
   /id_ed25519/i,
-  /\.gnupg\//i,         // GPG 密钥
-  /\/\.gnupg\//i,
-  /\.gnupg\\/i,
-  /\.env$/i,            // 环境变量文件
-  /\.env\./i,           // .env.local, .env.production 等
-  /\.npmrc$/i,          // npm 凭据
-  /\.pypirc$/i,         // PyPI 凭据
-  /\.netrc$/i,          // 网络凭据
+  /\.gnupg[\\/]/i,          // GPG 密钥
+  /\.env$/i,                // 环境变量文件
+  /\.env\./i,               // .env.local, .env.production 等
+  /\.npmrc$/i,              // npm 凭据
+  /\.pypirc$/i,             // PyPI 凭据
+  /\.netrc$/i,              // 网络凭据
   /_netrc$/i,
-  /credentials\.json$/i, // 凭据文件
-  /cookies\.txt$/i,      // Cookie 文件
-  /\.key$/i,             // 私钥文件
-  /\.pem$/i,             // 证书/私钥
-  /\.pfx$/i,             // 证书交换
-  /\.keystore$/i,        // Java 密钥库
-  /\.kdbx$/i,            // KeePass 数据库
-  /kube\/?config/i,      // Kubernetes 配置
-  /\.docker\/config\.json$/i,  // Docker 凭据
-  /\.aws\/credentials$/i,      // AWS 凭据
-  /\.aws\/config$/i,           // AWS 配置
+  /credentials\.json$/i,    // 凭据文件
+  /cookies\.txt$/i,          // Cookie 文件
+  /\.key$/i,                 // 私钥文件
+  /\.pem$/i,                 // 证书/私钥
+  /\.pfx$/i,                 // 证书交换
+  /\.keystore$/i,            // Java 密钥库
+  /\.kdbx$/i,                // KeePass 数据库
+  /kube[\\/?]/i,             // Kubernetes 配置
+  /\.docker[\\/]config\.json$/i,  // Docker 凭据
+  /\.aws[\\/]credentials$/i,       // AWS 凭据
+  /\.aws[\\/]config$/i,             // AWS 配置
 ]
 
 /**
@@ -114,7 +111,7 @@ const METADATA_HOSTS = [
   'metadata.azure.com',        // Azure 元数据
 ]
 
-/** 回环/内网 IP 范围正则 */
+/** 回环/内网 IP 范围正则 — IPv6 的 hostname 由 new URL() 返回时带方括号（如 [fe80::1]） */
 const INTERNAL_IP_PATTERNS = [
   /^127\./,                         // 127.0.0.0/8 回环
   /^10\./,                           // 10.0.0.0/8 内网
@@ -122,10 +119,10 @@ const INTERNAL_IP_PATTERNS = [
   /^192\.168\./,                     // 192.168.0.0/16 内网
   /^169\.254\./,                     // 169.254.0.0/16 链路本地
   /^0\./,                            // 0.0.0.0/8 本机
-  /^::1$/,                            // IPv6 回环
-  /^fe80:/i,                          // IPv6 链路本地
-  /^fc00:/i,                          // IPv6 唯一本地地址
-  /^fd/i,                             // IPv6 本地地址
+  /^\[?::1\]?$/,                     // IPv6 回环（带可选方括号）
+  /^\[?fe80:/i,                      // IPv6 链路本地
+  /^\[?fc00:/i,                      // IPv6 唯一本地地址
+  /^\[?fd/i,                         // IPv6 本地地址
 ]
 
 /** 内网主机名 */

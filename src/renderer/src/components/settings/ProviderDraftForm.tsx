@@ -98,7 +98,7 @@ export function ProviderDraftForm({
         />
       </div>
 
-      {draftError && <p className="text-xs text-red-400">{draftError}</p>}
+      {draftError && <p className="text-xs text-state-error">{draftError}</p>}
 
       <div className="flex justify-end gap-2">
         <button

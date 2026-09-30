@@ -105,7 +105,7 @@ export function OfficeOverviewPanel(): React.ReactElement {
 const EMPTY_TODOS: never[] = []
 
 function StatusDot({ status }: { status: 'pending' | 'in_progress' | 'completed' }): React.ReactElement {
-  if (status === 'completed') return <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-green-500/80" />
+  if (status === 'completed') return <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-state-success/80" />
   if (status === 'in_progress') return <Loader2 size={13} className="mt-0.5 shrink-0 animate-spin text-accent" />
   return <Circle size={13} className="mt-0.5 shrink-0 text-text-tertiary" />
 }

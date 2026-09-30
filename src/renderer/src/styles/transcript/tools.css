@@ -265,31 +265,32 @@
   background: var(--bg-hover);
 }
 
-/* 图标容器 —— 从裸字形改为 22×22 的着色方块。
-   裸字形在同质的一长串行里几乎不可辨；一个浅底色方块让"这是什么工具"
-   和"它处于什么状态"同时成立。 */
+/* 图标容器 —— 档案条化：去彩色方块底（视觉噪音），保留状态着色的裸图标。
+   工具名改用等宽字承担"这是什么"的可辨识度。 */
 .turn-tool__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+  background: transparent;
   color: var(--text-muted);
   transition: background-color var(--dur-fast) var(--ease-out-quart), color var(--dur-fast) var(--ease-out-quart);
 }
 .turn-tool__icon--running {
-  background: color-mix(in srgb, var(--theme-color) 14%, transparent);
+  background: transparent;
   color: var(--accent-fill, var(--theme-color));
 }
 .turn-tool__icon--error {
-  background: color-mix(in srgb, var(--state-error) 14%, transparent);
+  background: transparent;
   color: var(--state-error);
 }
 
 .turn-tool__label {
+  font-family: var(--font-mono);
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
@@ -492,4 +493,17 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* ── 等宽元信息 — Quiet Precision 签名件 ──
+   时间戳、状态、计数等"数据感"文字统一等宽 + 表格数字，
+   对齐稳定、扫读快，是效率工具的专业味来源之一。 */
+.msg-meta__time,
+.turn-tool__status,
+.warm-turn__meta,
+.reasoning__meta,
+.tool-group__status,
+.tool-group__count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }

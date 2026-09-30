@@ -3,7 +3,7 @@
  *
  * 把"成功 / 警告 / 错误 / 信息 / 加载中 / 禁用 / 待处理"等语义图标
  * 与项目色板绑定（与 design tokens / clear-glass-theme.json 对齐），
- * 避免业务代码到处传 className="text-emerald-400"。
+ * 避免业务代码到处传 className="text-state-success"。
  *
  * 使用 Tailwind 的 `text-*` 颜色类即可覆盖（color 通过 currentColor 透传）。
  */

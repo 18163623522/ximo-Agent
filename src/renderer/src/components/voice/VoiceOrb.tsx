@@ -33,6 +33,8 @@ function loadPosition(): { x: number; y: number } {
  */
 export function VoiceOrb(): React.ReactElement | null {
   const ttsEnabled = useStore((s) => s.settings?.ttsEnabled ?? false)
+  const orbEnabled = useStore((s) => s.settings?.voiceOrbEnabled ?? true)
+  const discussionEnabled = useStore((s) => s.settings?.voiceDiscussionEnabled ?? true)
   const updateSettings = useStore((s) => s.updateSettings)
   const isStreaming = useStore((s) => s.isStreaming)
 
@@ -97,6 +99,7 @@ export function VoiceOrb(): React.ReactElement | null {
     ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
     // 未拖拽 → 切换面板开合或还原最小化
     if (!drag.moved) {
+      if (!discussionEnabled) return // 讨论已关闭 → 面板不挂载，点击不做任何事
       if (isMinimized) {
         // 最小化状态 → 还原面板
         setIsMinimized(false)
@@ -112,7 +115,7 @@ export function VoiceOrb(): React.ReactElement | null {
       return p
     })
     dragRef.current = null
-  }, [discussion.isActive, isMinimized])
+  }, [discussion.isActive, isMinimized, discussionEnabled])
 
   // ESC 关闭面板
   useEffect(() => {
@@ -126,6 +129,21 @@ export function VoiceOrb(): React.ReactElement | null {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [panelOpen, discussion])
+
+  // ---- 关闭语音讨论 → 整条链路下线（停讨论 / 停麦 / 收回主进程模型）----
+  const discussionStopRef = useRef(discussion.stop)
+  const discussionActiveRef = useRef(discussion.isActive)
+  discussionStopRef.current = discussion.stop
+  discussionActiveRef.current = discussion.isActive
+
+  useEffect(() => {
+    if (discussionEnabled) return
+    // 正在讨论中 → 先优雅收尾（会把讨论内容汇总进主对话），再释放资源
+    if (discussionActiveRef.current) void discussionStopRef.current()
+    setPanelOpen(false)
+    setIsMinimized(false)
+    void window.api.voice.releaseStt().catch(() => {})
+  }, [discussionEnabled])
 
   // ---- 流式结束 → TTS 自动播报（非讨论模式下） ----
   const prevStreamingRef = useRef(false)
@@ -147,13 +165,15 @@ export function VoiceOrb(): React.ReactElement | null {
   }, [stopTts])
 
   if (!supported) return null
+  // 设置中关闭语音球 → 整个入口隐藏（讨论进行中不隐藏，避免中途丢失控制）
+  if (!orbEnabled && !discussion.isActive) return null
 
   const showActive = isListening || isSpeaking || discussion.isActive
 
   return (
     <>
-      {/* 全屏居中弹窗 */}
-      {panelOpen && (
+      {/* 全屏居中弹窗（语音讨论关闭时整块不挂载） */}
+      {panelOpen && discussionEnabled && (
         <div
           className="voice-panel-anchor"
           onClick={(e) => {
@@ -170,6 +190,7 @@ export function VoiceOrb(): React.ReactElement | null {
             sttSupported={sttSupported}
             ttsSupported={ttsSupported}
             ttsEnabled={ttsEnabled}
+            discussionEnabled={discussionEnabled}
             isStreaming={isStreaming || discussion.isAIResponding}
             volume={discussion.volume}
             onStart={() => void discussion.start()}
@@ -193,6 +214,7 @@ export function VoiceOrb(): React.ReactElement | null {
       <div
         className={'voice-orb voice-orb--' + orbState}
         style={{ left: pos.x, top: pos.y, width: ORB_SIZE, height: ORB_SIZE }}
+        title={discussionEnabled ? undefined : '语音讨论已在设置中关闭'}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

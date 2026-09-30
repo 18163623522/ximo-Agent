@@ -45,7 +45,7 @@ export function ToolCallGroup({ calls }: { calls: { name: string; status: string
         {callingCount > 0 || thinkingCount > 0 ? (
           <Loader2 size={13} className="animate-spin text-accent shrink-0" />
         ) : (
-          <CheckCircle size={13} className="text-green-500/70 shrink-0" />
+          <CheckCircle size={13} className="text-state-success/70 shrink-0" />
         )}
         <span className="text-text-secondary shrink-0">工具调用</span>
         <span className="text-text-muted">{total}</span>
@@ -79,7 +79,7 @@ export function CollapsedToolResults({ results }: { results: ToolResult[] }): Re
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-bg-hover-soft active:scale-[0.97]"
       >
-        <CheckCircle size={13} className="text-green-500/70 shrink-0" />
+        <CheckCircle size={13} className="text-state-success/70 shrink-0" />
         <span className="text-text-secondary shrink-0">工具结果</span>
         <span className="text-text-muted">{count}</span>
         {summary && <span className="text-text-muted truncate">· {summary}</span>}
@@ -119,24 +119,24 @@ export function CollapsedToolErrors({ results }: { results: ToolResult[] }): Rea
   const uniqueErrors = deduped.length
 
   return (
-    <div className="mt-2 rounded-panel border border-red-500/20 bg-red-500/5 overflow-hidden">
+    <div className="mt-2 rounded-panel border border-state-error/20 bg-state-error/5 overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-red-500/8 active:scale-[0.97]"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-state-error/8 active:scale-[0.97]"
       >
-        <AlertTriangle size={13} className="text-red-400/70 shrink-0" />
-        <span className="text-red-400 shrink-0">工具错误</span>
-        <span className="text-red-400/60">{totalErrors}</span>
-        {uniqueErrors < totalErrors && <span className="text-red-400/50">（{uniqueErrors} 种）</span>}
-        <span className="ml-auto flex items-center gap-1 text-red-400/50 shrink-0">
+        <AlertTriangle size={13} className="text-state-error/70 shrink-0" />
+        <span className="text-state-error shrink-0">工具错误</span>
+        <span className="text-state-error/60">{totalErrors}</span>
+        {uniqueErrors < totalErrors && <span className="text-state-error/50">（{uniqueErrors} 种）</span>}
+        <span className="ml-auto flex items-center gap-1 text-state-error/50 shrink-0">
           <ChevronDown size={11} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </span>
       </button>
       {expanded && (
-        <div className="border-t border-red-500/10 px-2 py-1.5 space-y-1">
+        <div className="border-t border-state-error/10 px-2 py-1.5 space-y-1">
           {deduped.map((err, i) => (
-            <div key={i} className="rounded-card bg-red-500/5 px-3 py-1.5 text-xs text-red-400">
-              {err.count > 1 && <span className="text-red-400/50 mr-1">[{err.count}×]</span>}
+            <div key={i} className="rounded-card bg-state-error/5 px-3 py-1.5 text-xs text-state-error">
+              {err.count > 1 && <span className="text-state-error/50 mr-1">[{err.count}×]</span>}
               {err.error}
             </div>
           ))}

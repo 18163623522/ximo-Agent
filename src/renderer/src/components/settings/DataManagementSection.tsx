@@ -53,7 +53,7 @@ export function DataManagementSection({
       </DataRow>
 
       {importMsg && (
-        <div className={`flex items-center gap-2 rounded-card p-2.5 text-xs ${importMsg.ok ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+        <div className={`flex items-center gap-2 rounded-card p-2.5 text-xs ${importMsg.ok ? 'bg-state-success/10 text-state-success' : 'bg-state-error/10 text-state-error'}`}>
           {importMsg.ok ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
           {importMsg.text}
         </div>
@@ -64,7 +64,7 @@ export function DataManagementSection({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => { onClearAll(); setConfirmClear(false) }}
-              className="rounded-card bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-600 active:scale-[0.97]"
+              className="rounded-card bg-state-error px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-state-error active:scale-[0.97]"
             >
               确认清空
             </button>
@@ -79,7 +79,7 @@ export function DataManagementSection({
           <button
             onClick={() => setConfirmClear(true)}
             disabled={convoCount === 0}
-            className="rounded-card border border-red-500/30 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-card border border-state-error/30 px-3 py-1.5 text-xs text-state-error transition-colors hover:bg-state-error/10 disabled:cursor-not-allowed disabled:opacity-40"
           >
             清空
           </button>

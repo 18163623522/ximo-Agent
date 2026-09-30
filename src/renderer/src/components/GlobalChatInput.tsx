@@ -49,8 +49,8 @@ export function GlobalChatInput({ emptyState = false }: { emptyState?: boolean }
   const {
     text, setText, textareaRef, showSlashMenu, activeSlashCmd, setActiveSlashCmd,
     slashCommands, hasSkillCommands,
-    showFileMention, matchedFiles, selectedMentionIndex, setSelectedMentionIndex,
-    insertFileMention, handleMentionKeyDown,
+    showFileMention, matchedFiles, desktopMentionAvailable, selectedMentionIndex, setSelectedMentionIndex,
+    insertFileMention, insertDesktopMention, handleMentionKeyDown,
     isDragOver, handleDragOver, handleDragLeave, handleDrop,
     handleSend, handleKeyDown, handleSlashCommand, handleAttachFile,
   } = useChatActions(currentMode, isStreaming, sendMessage, pastedImagePaths, addAttachedFile, addPastedImage, clearPastedImages, projectPath)
@@ -107,7 +107,7 @@ export function GlobalChatInput({ emptyState = false }: { emptyState?: boolean }
         />
 
         <div
-          className={`rounded-panel border bg-bg-elevated-soft backdrop-blur-md transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-base ease-out-quart ${
+          className={`rounded-panel border glass-bar transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] duration-base ease-out-quart ${
             isStreaming ? 'beam-border border-accent/20'
               : isDragOver ? 'border-accent border-2'
                 // 聚焦态刻意**不用强调色**，只做中性边框的深浅变化。
@@ -137,14 +137,21 @@ export function GlobalChatInput({ emptyState = false }: { emptyState?: boolean }
           />
 
           {enhanceError && (
-            <div className="flex items-center gap-1.5 px-4 py-1 text-caption text-red-400">
+            <div className="flex items-center gap-1.5 px-4 py-1 text-caption text-state-error">
               <span>⚠</span>
               <span>增强失败：{enhanceError}</span>
             </div>
           )}
 
           {showFileMention && (
-            <FileMentionMenu files={matchedFiles} selectedIndex={selectedMentionIndex} onSelect={insertFileMention} onHover={setSelectedMentionIndex} />
+            <FileMentionMenu
+              files={matchedFiles}
+              selectedIndex={selectedMentionIndex}
+              desktopMention={desktopMentionAvailable}
+              onSelect={insertFileMention}
+              onSelectDesktop={insertDesktopMention}
+              onHover={setSelectedMentionIndex}
+            />
           )}
 
           <ChatInputActions

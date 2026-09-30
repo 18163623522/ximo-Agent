@@ -88,6 +88,8 @@ export const extendedApi = {
   voice: {
     transcribe: (pcm: Float32Array, sampleRate: number): Promise<{ text: string; error?: string }> =>
       ipcRenderer.invoke('voice:transcribe', pcm, sampleRate),
+    /** 释放主进程已加载的 Whisper 模型（关闭语音功能时回收内存） */
+    releaseStt: (): Promise<{ released: boolean }> => ipcRenderer.invoke('voice:stt:release'),
     // Edge TTS — 合成语音，返回 MP3 ArrayBuffer
     tts: {
       synthesize: (text: string, voiceName: string): Promise<{ buffer: ArrayBuffer | null; error: string | null }> =>

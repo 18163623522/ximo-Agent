@@ -23,7 +23,7 @@ export function InlineTerminalOutput({
       {/* 输出区 */}
       <div className="p-3 font-mono text-xs max-h-48 overflow-y-auto">
         {output ? (
-          <pre className={`whitespace-pre-wrap break-all ${isSuccess ? 'text-green-400' : 'text-red-400'}`}>
+          <pre className={`whitespace-pre-wrap break-all ${isSuccess ? 'text-state-success' : 'text-state-error'}`}>
             {output}
           </pre>
         ) : (

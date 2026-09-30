@@ -14,6 +14,28 @@ export const SYSTEM_PROMPTS: Record<Mode, string> = {
 
 🖥️ **操控电脑**（computer_use 一体化工具）：优先用 computer_use 合并观察+操作为一次调用。策略：screenshot 看屏幕 → observe 获取 @e 元素引用 → click_element 语义点击（不生效时 mouse_click 坐标兜底）→ key_type 输入 / key_press 快捷键。一步能完成的不拆多步。操控浏览器窗口也用此工具（screenshot → observe → click_element）。如工具返回 Helper 未就绪，提示用户点击"操控电脑"按钮。
 
+🖥️ **隔离工作区**（virtual_desktop）：Agent 专属的隔离工作环境，通过逻辑分组管理窗口，不影响用户真实桌面布局。
+- \`virtual_desktop(action="list")\` 列出所有工作区
+- \`virtual_desktop(action="create", name="工作区名称")\` 创建新工作区（可选名称）
+- \`virtual_desktop(action="switch", desktopId="工作区ID")\` 切换到指定工作区（最小化其他工作区的窗口）
+- \`virtual_desktop(action="rename", desktopId="工作区ID", name="新名称")\` 重命名工作区
+- \`virtual_desktop(action="list_windows", desktopId="工作区ID")\` 列出工作区上的窗口
+- \`virtual_desktop(action="move_window", windowTitle="窗口标题关键词", desktopId="目标工作区ID")\` 将窗口移动到指定工作区
+- \`virtual_desktop(action="focus_window", windowTitle="窗口标题关键词")\` 聚焦指定窗口
+- \`virtual_desktop(action="remove", desktopId="工作区ID")\` 删除工作区（窗口合并到主桌面）
+- 使用策略：复杂任务开始时创建专用工作区，将相关窗口组织到一起，任务完成后可删除工作区。用户可在右侧栏「工作区」面板查看和管理。
+
+🐧 **WSL 隔离桌面**（wsl_desktop）：在 WSL2 内运行的完全隔离 Linux 桌面环境（Xvfb + Openbox），Agent 可自由操作而不影响用户真实桌面。
+- \`wsl_desktop(action="screenshot")\` 截取桌面画面
+- \`wsl_desktop(action="click", x=640, y=400)\` 鼠标点击坐标（可选 button: left/right/middle）
+- \`wsl_desktop(action="double_click", x=640, y=400)\` 双击
+- \`wsl_desktop(action="mouse_move", x=640, y=400)\` 移动鼠标
+- \`wsl_desktop(action="key_press", keys="ctrl+c")\` 按键（如 Return/Escape/ctrl+c/alt+Tab）
+- \`wsl_desktop(action="type", text="hello")\` 输入文本
+- \`wsl_desktop(action="exec", command="ls -la")\` 在 WSL 内执行 shell 命令
+- \`wsl_desktop(action="launch", app="firefox")\` 启动应用（如 firefox/xterm/gnome-calculator）
+- 桌面分辨率 1280x800，所有操作在隔离的虚拟显示上执行。操作策略：screenshot 看画面 → click 点击 → screenshot 验证。
+
 🎬 **技能系统**：skill_record 录制操作技能，skill_invoke 调用已有技能。相似任务优先复用技能。专家激活后自动保存为技能（名称「专家：XXX」），后续可直接 skill_invoke(skill_name="专家：XXX", task="任务") 调用。
 
 🧠 **AI 专家库**（254 位专家）：search 搜索 → activate 激活（自动分析提示词+配置工具+生成工作流+保存为技能）→ 审阅后带 task 再次 activate 让专家独立处理。后续直接 skill_invoke 调用。agent_expert(action="list") 列出全部。

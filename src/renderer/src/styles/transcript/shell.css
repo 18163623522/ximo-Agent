@@ -2,7 +2,9 @@
    Transcript — 会话区样式（参考 DeepSeek-Reasonix）
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── 外壳 ── */
+/* ── 外壳 ──
+   阅读区实底（壳透芯实）：对话正文永远落在 --bg-reading 恒定底色上，
+   对比度不随壁纸/主题包浮动；玻璃只保留给头栏、侧栏、输入框等低密度壳层。 */
 .transcript-shell {
   position: relative;
   display: flex;
@@ -11,6 +13,7 @@
   min-width: 0;
   flex: 1;
   overflow: hidden;
+  background: var(--bg-reading);
 }
 
 .transcript {
@@ -20,8 +23,8 @@
   scroll-behavior: auto;
   scrollbar-gutter: stable;
   padding: 0 24px;
-  padding-top: 20px;
-  padding-bottom: 80px;
+  padding-top: 28px;
+  padding-bottom: 96px;
   contain: layout style;
   -webkit-overflow-scrolling: touch;
 }
@@ -56,19 +59,23 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 80px;
 }
+/* 消息组间距 — 呼吸感 = 大气之本：组间拉开（28px），组内紧凑（4px），
+   用间距对比制造阅读节奏，而不是均匀的挤 */
 .msg--user {
   margin-top: 28px;
 }
 .msg--user:first-child {
   margin-top: 0;
 }
+/* 用户消息 — 从"聊天 App 气泡"弱化为安静的中性引用块：
+   去主题色底、收圆角与内距，让会话流的视觉重心回到 AI 正文上 */
 .msg--user .msg__body {
   display: inline-block;
   max-width: 100%;
-  padding: 10px 16px;
-  border-radius: 18px 18px 18px 4px;
-  background: color-mix(in srgb, var(--theme-color) 8%, var(--bg-elevated));
-  border: 1px solid color-mix(in srgb, var(--theme-color) 15%, var(--border-subtle));
+  padding: 8px 12px;
+  border-radius: 8px 8px 8px 2px;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
   color: var(--text-primary);
   font-size: 15px;
   line-height: 1.6;
@@ -81,12 +88,12 @@
 }
 .msg--assistant .msg__body {
   padding: 4px 0;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text-primary);
 }
 .msg--assistant .msg__body .markdown-body {
-  font-size: 15px;
+  font-size: 16px;
 }
 .msg--process-only .msg__body,
 .msg--process-with-text .msg__body {

@@ -241,7 +241,7 @@ function ProjectFileTreePanel({ projectPath }: { projectPath: string }): React.R
           <div className="flex-1 overflow-y-auto py-1">
             {error ? (
               <div className="px-4 py-8 text-center">
-                <p className="text-xs text-red-400">{error}</p>
+                <p className="text-xs text-state-error">{error}</p>
                 <button onClick={fetchTree} className="btn-ghost mt-2 rounded-card px-3 py-1 text-caption">重试</button>
               </div>
             ) : loading && tree.length === 0 ? (

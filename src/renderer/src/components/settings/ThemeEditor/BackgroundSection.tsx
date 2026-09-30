@@ -97,7 +97,7 @@ export function BackgroundSection({
               </div>
               <button
                 onClick={() => onChange({ ...config, type: 'none', path: undefined })}
-                className="rounded-control p-0.5 text-text-muted transition-colors hover:text-red-400 active:scale-[0.97]"
+                className="rounded-control p-0.5 text-text-muted transition-colors hover:text-state-error active:scale-[0.97]"
                 title="移除背景"
               >
                 <X size={13} />
@@ -200,7 +200,7 @@ export function BackgroundSection({
       </div>
 
       {error && (
-        <div className="mt-1.5 flex items-center gap-2 rounded-card bg-red-500/10 p-2 text-caption text-red-400">
+        <div className="mt-1.5 flex items-center gap-2 rounded-card bg-state-error/10 p-2 text-caption text-state-error">
           <AlertCircle size={13} /> {error}
         </div>
       )}
@@ -243,7 +243,7 @@ export function BackgroundSection({
                 </button>
                 <button
                   onClick={() => void handleDelete(f.path)}
-                  className="rounded-control p-0.5 text-text-muted opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:text-red-400 group-hover:opacity-100 active:scale-[0.97]"
+                  className="rounded-control p-0.5 text-text-muted opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow,filter] hover:text-state-error group-hover:opacity-100 active:scale-[0.97]"
                   title="删除"
                 >
                   <Trash2 size={11} />
