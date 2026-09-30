@@ -148,7 +148,7 @@ class AgentWorkspaceManagerImpl {
 
       if (!hasDistroInstalled) {
         // 自动安装 Debian
-        this.setStage('installing_distro', '正在下载并安装 Debian（约 300MB，首次可能需要几分钟）…')
+        this.setStage('installing_distro', '正在下载并安装 Debian（约 300MB，首次可能需要几分钟；若弹出 UAC 确认窗口请点「是」）…')
         const installed = await installDistro()
         if (!installed) {
           const lastErr = getLastInstallError()

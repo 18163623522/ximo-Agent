@@ -109,11 +109,12 @@ export async function saveConversations(conversations: Conversation[]): Promise<
   if (pendingResolve) { const prev = pendingResolve; pendingResolve = null; prev() }
   // 首次调用时启动 maxWait 兜底定时器 — 高频场景下确保最多 5s 落盘一次
   if (saveConvMaxTimer === null) {
-    saveConvMaxTimer = setTimeout(() => {
+    saveConvMaxTimer = setTimeout(async () => {
       saveConvMaxTimer = null
       if (saveConvTimer !== null) { clearTimeout(saveConvTimer); saveConvTimer = null }
+      // 先落盘再 resolve — 提前 resolve 会让调用方 await 返回时文件尚未写入（竞态）
+      await doWriteConversations()
       if (pendingResolve) { const r = pendingResolve; pendingResolve = null; r() }
-      void doWriteConversations()
     }, SAVE_MAX_WAIT_MS)
   }
   return new Promise((resolve) => {
@@ -121,7 +122,9 @@ export async function saveConversations(conversations: Conversation[]): Promise<
     saveConvTimer = setTimeout(async () => {
       saveConvTimer = null
       if (saveConvMaxTimer !== null) { clearTimeout(saveConvMaxTimer); saveConvMaxTimer = null }
-      if (pendingResolve) { const r = pendingResolve; pendingResolve = null; r() }
+      // 写盘完成后才 resolve：此前在 await 前调用 r() 会让 saveConversations 的
+      // Promise 提前完成，调用方紧接着读文件会拿到旧数据（并行负载下必现）
+      if (pendingResolve === resolve) pendingResolve = null
       await doWriteConversations()
       resolve()
     }, SAVE_DEBOUNCE_MS)

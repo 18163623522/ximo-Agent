@@ -9,10 +9,14 @@
 
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { join } from 'path'
 import { decodeWslOutput, matchWslVirtualizationError } from './wsl-decode'
 import { WSL_DISTRIBUTION } from './wsl-exec'
 
 const execFileAsync = promisify(execFile)
+
+/** wsl.exe 绝对路径 — 打包版从资源管理器启动时 PATH 环境可能与开发态不同，绝对路径最稳 */
+const WSL_EXE = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'wsl.exe')
 
 /** 最近一次发行版安装失败的解码后原因 — 透传到面板错误提示 */
 let lastInstallError = ''
@@ -66,25 +70,43 @@ export async function isAdmin(): Promise<boolean> {
   }
 }
 
+export interface ElevateResult {
+  ok: boolean
+  /** 提权执行的输出日志 — 失败时的诊断来源（UAC 路径父子进程无管道，输出必须落盘才能回收） */
+  log: string
+  /** 进程退出码（-1 = 未能取得） */
+  exitCode: number
+}
+
 /**
  * 以管理员权限执行命令
  * 如果当前已是管理员 → 直接执行 .bat（不弹 UAC）
  * 如果当前非管理员 → 用 Start-Process -Verb RunAs 触发 UAC 提权弹窗
  *
+ * 两条路径的输出都重定向到日志文件并随结果返回。打包版静默失败的教训：
+ * 此前 UAC 路径丢弃全部输出、失败只返回 false，面板只能显示"安装失败"没有原因。
+ *
  * @param command 完整命令行（如 'dism.exe /online /enable-feature ...'）
  * @param timeoutMs 提权执行的超时（大文件下载类命令需要放宽）
- * @returns true=成功, false=用户拒绝UAC或执行失败
  */
-export async function runAsAdmin(command: string, timeoutMs = 180_000): Promise<boolean> {
+export async function runAsAdmin(command: string, timeoutMs = 180_000): Promise<ElevateResult> {
   const fs = await import('fs')
   const path = await import('path')
   const os = await import('os')
 
+  const batPath = path.join(os.tmpdir(), `agent-wsl-elev-${Date.now()}.bat`)
+  const logPath = `${batPath}.log`
+  // 输出统一重定向到日志 — 提权进程的 stdout/stderr 无法经管道回收
+  const batContent = `@echo off\r\n${command} > "${logPath}" 2>&1\r\nexit /b %errorlevel%\r\n`
+  const readLog = (): string => {
+    try { return fs.readFileSync(logPath, 'utf8').replace(/\s+/g, ' ').trim().slice(0, 800) } catch { return '' }
+  }
+  const cleanup = (): void => {
+    try { fs.unlinkSync(batPath) } catch { /* 忽略 */ }
+    try { fs.unlinkSync(logPath) } catch { /* 忽略 */ }
+  }
+
   try {
-    // 把命令写入临时 .bat 文件
-    const tmpDir = os.tmpdir()
-    const batPath = path.join(tmpDir, `agent-wsl-elev-${Date.now()}.bat`)
-    const batContent = `@echo off\r\n${command}\r\nexit /b %errorlevel%\r\n`
     fs.writeFileSync(batPath, batContent, { encoding: 'utf8' })
 
     // 先检测是否已经是管理员
@@ -93,52 +115,56 @@ export async function runAsAdmin(command: string, timeoutMs = 180_000): Promise<
 
     if (admin) {
       // 已是管理员 — 直接执行 .bat，不走 RunAs
-      // 用 cmd.exe /c 执行 .bat 并等待退出码
+      let exitCode = 0
       try {
-        const result = await execFileAsync('cmd.exe', ['/c', batPath], {
+        await execFileAsync('cmd.exe', ['/c', batPath], {
           timeout: timeoutMs, windowsHide: true,
           maxBuffer: 10 * 1024 * 1024,
         })
-        console.log('[AgentWorkspace] bat executed, stdout:', (result.stdout || '').slice(0, 300))
       } catch (e) {
         // dism 退出码 3010 = ERROR_SUCCESS_REBOOT_REQUIRED（成功但需要重启）
-        // 退出码 0 = 成功
-        // 其他非零退出码才是真正的失败
-        const err = e as { code?: number; stderr?: string; message: string }
-        const exitCode = err.code ?? -1
-        console.log('[AgentWorkspace] bat exit code:', exitCode, 'stderr:', (err.stderr || '').slice(0, 300))
-        if (exitCode === 3010 || exitCode === 0) {
-          // 成功（可能需要重启）
-        } else {
-          // 检查 stderr 是否表示"已启用"
-          const errOut = err.stderr || err.message || ''
-          if (errOut.includes('已启用') || errOut.includes('already') || errOut.includes('成功')) {
-            console.log('[AgentWorkspace] feature already enabled')
-          } else {
-            try { fs.unlinkSync(batPath) } catch { /* 忽略 */ }
-            return false
-          }
+        const err = e as { code?: number; message: string }
+        exitCode = err.code ?? -1
+        const text = readLog() || (err.message || '').replace(/\s+/g, ' ').trim()
+        console.log('[AgentWorkspace] bat exit code:', exitCode, '|', text.slice(0, 300))
+        if (exitCode !== 0 && exitCode !== 3010) {
+          cleanup()
+          // "已启用/already" 幂等成功
+          if (/已启用|already|成功/.test(text)) return { ok: true, log: text, exitCode }
+          return { ok: false, log: text, exitCode }
         }
       }
-      try { fs.unlinkSync(batPath) } catch { /* 忽略 */ }
-      return true
+      cleanup()
+      return { ok: true, log: readLog(), exitCode }
     }
 
     // 非管理员 — 用 Start-Process -Verb RunAs 触发 UAC
     const psScript = `$p = Start-Process -FilePath '${batPath.replace(/'/g, "''")}' -Verb RunAs -Wait -WindowStyle Hidden -PassThru; exit $p.ExitCode`
-    await execFileAsync('powershell.exe', [
-      '-NoProfile', '-NonInteractive', '-Command', psScript
-    ], { timeout: timeoutMs, windowsHide: true })
-
-    try { fs.unlinkSync(batPath) } catch { /* 忽略 */ }
-    return true
+    let exitCode = 0
+    try {
+      await execFileAsync('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-Command', psScript
+      ], { timeout: timeoutMs, windowsHide: true })
+    } catch (e) {
+      const err = e as { code?: number; message: string }
+      exitCode = err.code ?? -1
+      const msg = err.message || ''
+      console.error('[AgentWorkspace] runAsAdmin error:', msg.slice(0, 500))
+      if (msg.includes('1223') || msg.includes('用户取消') || msg.includes('canceled')) {
+        cleanup()
+        return { ok: false, log: '用户拒绝了 UAC 提权（或被安全软件/组策略拦截）', exitCode }
+      }
+      // 其他 PowerShell 层错误 — 继续尝试读 bat 日志拿真实原因
+    }
+    const log = readLog()
+    cleanup()
+    // 3010 = 成功但需要重启
+    return { ok: exitCode === 0 || exitCode === 3010, log, exitCode }
   } catch (e) {
     const msg = (e as Error).message || ''
     console.error('[AgentWorkspace] runAsAdmin error:', msg.slice(0, 500))
-    if (msg.includes('1223') || msg.includes('用户取消') || msg.includes('canceled')) {
-      console.warn('[AgentWorkspace] 用户拒绝了 UAC 提权')
-    }
-    return false
+    cleanup()
+    return { ok: false, log: msg.slice(0, 800), exitCode: -1 }
   }
 }
 
@@ -149,7 +175,11 @@ export async function runAsAdmin(command: string, timeoutMs = 180_000): Promise<
 export async function enableWslFeature(): Promise<boolean> {
   // 两条 dism 命令用 && 连接
   const dismCmd = 'dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart && dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart'
-  return await runAsAdmin(dismCmd)
+  const r = await runAsAdmin(dismCmd)
+  if (!r.ok) {
+    console.warn('[AgentWorkspace] WSL 功能启用失败:', r.log || `退出码 ${r.exitCode}`)
+  }
+  return r.ok
 }
 
 // -----------------------------------------------------------------------
@@ -159,7 +189,7 @@ export async function enableWslFeature(): Promise<boolean> {
 /** 检测是否有 Debian 发行版已安装 */
 export async function hasDistro(): Promise<boolean> {
   try {
-    const { stdout } = await execFileAsync('wsl.exe', ['-l', '-q'], {
+    const { stdout } = await execFileAsync(WSL_EXE, ['-l', '-q'], {
       timeout: 10_000, windowsHide: true, encoding: 'buffer'
     })
     // wsl.exe 输出是 UTF-16LE — 必须 buffer 接收后解码（见 wsl-decode.ts）
@@ -172,7 +202,7 @@ export async function hasDistro(): Promise<boolean> {
 /** 检测 WSL 是否可正常运行（功能已生效） */
 export async function isWslFunctional(): Promise<boolean> {
   try {
-    const { stdout } = await execFileAsync('wsl.exe', ['--status'], {
+    const { stdout } = await execFileAsync(WSL_EXE, ['--status'], {
       timeout: 5_000, windowsHide: true, encoding: 'buffer'
     })
     // 如果 WSL 功能未生效，会输出 "此应用程序需要…"
@@ -193,39 +223,49 @@ export function wslErrorText(e: unknown): string {
 
 /** 安装 Debian 发行版（不自动启动，自动处理管理员权限）。
  *  下载约 300MB 且不续传 — 超时放宽到 15 分钟；Store 渠道失败后追加
- *  --web-download 直连 CDN 重试一次。 */
+ *  --web-download 直连 CDN 重试一次。
+ *  策略：先免提权直装（现代 WSL 功能启用后装发行版不需要管理员 — 打包版从
+ *  资源管理器启动是非管理员，免提权可避开 UAC 弹窗被拒/被安全软件拦截的
+ *  静默失败），失败再 UAC 提权重试；每次失败原因都落入 lastInstallError。 */
 export async function installDistro(): Promise<boolean> {
   const admin = await isAdmin()
   const attempts: string[][] = [
     ['--install', '-d', WSL_DISTRIBUTION, '--no-launch'],
     ['--install', '-d', WSL_DISTRIBUTION, '--no-launch', '--web-download'],
   ]
+  const alreadyInstalled = (t: string): boolean => t.includes('已安装') || /already installed/i.test(t)
 
   for (const args of attempts) {
-    if (admin) {
-      try {
-        await execFileAsync('wsl.exe', args, {
-          timeout: 900_000,
-          windowsHide: true,
-          maxBuffer: 10 * 1024 * 1024,
-          encoding: 'buffer',
-        })
-        return true
-      } catch (e) {
-        const text = wslErrorText(e)
-        if (text.includes('已安装') || /already installed/i.test(text)) return true
-        console.warn('[AgentWorkspace] wsl install 失败:', text)
-        const vzError = matchWslVirtualizationError(text)
-        if (vzError) {
-          // 虚拟化不可用 — 换下载渠道重装也无法解决，直接报错
-          lastInstallError = vzError
-          return false
-        }
-        lastInstallError = text
+    const channel = args.includes('--web-download') ? 'CDN 直连' : 'Store'
+
+    // 1) 免提权直装（管理员用户下即等同原直装路径）
+    try {
+      await execFileAsync(WSL_EXE, args, {
+        timeout: 900_000,
+        windowsHide: true,
+        maxBuffer: 10 * 1024 * 1024,
+        encoding: 'buffer',
+      })
+      return true
+    } catch (e) {
+      const text = wslErrorText(e)
+      if (alreadyInstalled(text)) return true
+      console.warn(`[AgentWorkspace] wsl install 失败[${channel} 直装]:`, text)
+      const vzError = matchWslVirtualizationError(text)
+      if (vzError) {
+        // 虚拟化不可用 — 换下载渠道重装也无法解决，直接报错
+        lastInstallError = vzError
+        return false
       }
-    } else {
-      // 非管理员 — UAC 提权安装
-      if (await runAsAdmin(`wsl.exe ${args.join(' ')}`, 900_000)) return true
+      lastInstallError = `[${channel} 直装] ${text}`
+    }
+
+    // 2) 非管理员 — UAC 提权重试（提权输出落日志随结果返回，失败原因可见）
+    if (!admin) {
+      const r = await runAsAdmin(`${WSL_EXE} ${args.join(' ')}`, 900_000)
+      if (r.ok || alreadyInstalled(r.log)) return true
+      lastInstallError = `[${channel} 提权] ${r.log || `退出码 ${r.exitCode}`}`
+      console.warn(`[AgentWorkspace] wsl install 失败[${channel} 提权]:`, lastInstallError)
     }
   }
   return false
@@ -236,18 +276,18 @@ export async function firstBootDistro(): Promise<boolean> {
   try {
     // 以 root 身份执行一次，触发 WSL 初始化
     // --exec 跳过默认用户登录，直接用 root
-    await execFileAsync('wsl.exe', [
+    await execFileAsync(WSL_EXE, [
       '-d', WSL_DISTRIBUTION, '--exec', 'bash', '-c', 'echo OK'
     ], { timeout: 30_000, windowsHide: true })
 
     // 设置默认用户为 root（避免交互式用户创建）
-    await execFileAsync('wsl.exe', [
+    await execFileAsync(WSL_EXE, [
       '-d', WSL_DISTRIBUTION, '--exec', 'bash', '-c',
       'echo "[user]\ndefault=root" > /etc/wsl.conf'
     ], { timeout: 10_000, windowsHide: true })
 
     // 重启 WSL 使配置生效
-    await execFileAsync('wsl.exe', ['--terminate', WSL_DISTRIBUTION], {
+    await execFileAsync(WSL_EXE, ['--terminate', WSL_DISTRIBUTION], {
       timeout: 10_000, windowsHide: true
     })
 
@@ -266,7 +306,7 @@ export async function firstBootDistro(): Promise<boolean> {
 /** 读取已注册发行版的 WSL 版本（未注册返回 0） */
 export async function getDistroVersion(): Promise<number> {
   try {
-    const { stdout } = await execFileAsync('wsl.exe', ['-l', '-v'], {
+    const { stdout } = await execFileAsync(WSL_EXE, ['-l', '-v'], {
       timeout: 15_000, windowsHide: true, encoding: 'buffer'
     })
     const m = decodeWslOutput(stdout as Buffer).match(/Debian\s+\S+\s+(\d)\s*$/m)
@@ -280,11 +320,11 @@ export async function getDistroVersion(): Promise<number> {
  *  默认版本切 1；若发行版此前已注册为 WSL2（罕见：开过 VT）则转换为 WSL1（可能数分钟）。 */
 export async function switchToWsl1(): Promise<boolean> {
   try {
-    await execFileAsync('wsl.exe', ['--set-default-version', '1'], {
+    await execFileAsync(WSL_EXE, ['--set-default-version', '1'], {
       timeout: 15_000, windowsHide: true, encoding: 'buffer'
     })
     if ((await getDistroVersion()) === 2) {
-      await execFileAsync('wsl.exe', ['--set-version', WSL_DISTRIBUTION, '1'], {
+      await execFileAsync(WSL_EXE, ['--set-version', WSL_DISTRIBUTION, '1'], {
         timeout: 600_000, windowsHide: true, maxBuffer: 10 * 1024 * 1024, encoding: 'buffer'
       })
     }
