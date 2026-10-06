@@ -56,6 +56,10 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     // 视觉分析 — 只读（读图片走视觉模型），与 file_read/web_fetch 同级；
     // 此前未列入任何 allow → 回退保守 ask，导致读图也要审批
     { tool: 'vision_analyze' },
+    // Office 文档读取 — 只读类 action 放行（replace 写文件 → 见 ask 列表）
+    { tool: 'office_docs', subject: 'read' },
+    { tool: 'office_docs', subject: 'info' },
+    { tool: 'office_docs', subject: 'sheets' },
     // 联网缓存/调研、记忆写入、技能调用 — 无外部副作用（写的是自有数据目录）。
     // 此前未列入 allow → 回退 ask；主机侧无人值守（fail-closed）下这些工具
     // 形同虚设，且白占上下文、诱导模型尝试后必然失败
@@ -94,6 +98,8 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'git_operations' },
     { tool: 'code_execute' },
     { tool: 'file_delete' },
+    // Office 文档替换会原地改写文件 — 与 file_edit 同级审批
+    { tool: 'office_docs', subject: 'replace' },
     // WSL 桌面内执行命令/启动应用 — 等同 terminal_exec 审批级别
     { tool: 'wsl_desktop', subject: 'exec' },
     { tool: 'wsl_desktop', subject: 'launch' },
@@ -119,6 +125,8 @@ export const SAFE_CONFIG: PermissionConfig = {
   allow: [],
   ask: [
     { tool: 'file_delete' },
+    // Office 文档替换会原地改写文件 — 与 file_edit 同级审批
+    { tool: 'office_docs', subject: 'replace' },
     // WSL 桌面内执行命令/启动应用 — 等同 terminal_exec 审批级别（画面/交互类走默认放行）
     { tool: 'wsl_desktop', subject: 'exec' },
     { tool: 'wsl_desktop', subject: 'launch' },
@@ -153,6 +161,10 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     // 视觉分析 — 只读（读图片走视觉模型），与 file_read/web_fetch 同级；
     // 此前未列入任何 allow → 回退保守 ask，导致读图也要审批
     { tool: 'vision_analyze' },
+    // Office 文档读取 — 只读类 action 放行（replace 写文件 → 见 ask 列表）
+    { tool: 'office_docs', subject: 'read' },
+    { tool: 'office_docs', subject: 'info' },
+    { tool: 'office_docs', subject: 'sheets' },
     // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）
@@ -265,6 +277,9 @@ export function extractSubject(toolName: string, args: Record<string, unknown>):
     case 'git_operations':
       return (args.action as string) || ''
     case 'wsl_desktop':
+      return (args.action as string) || ''
+    case 'office_docs':
+      // 读类（read/info/sheets）放行、写类（replace）审批 — 按 action 分级
       return (args.action as string) || ''
     case 'file_delete':
       return (args.filePath as string) || ''

@@ -18,6 +18,7 @@ import { toolRegistry } from '../../main/tools/ToolRegistry'
 import { setAllowedWriteRoots } from '../../main/security-guard'
 import { loadSettings, saveSettings } from '../../main/store'
 import { DesktopBusTool } from '../tools/desktop-tool'
+import { OfficeDocsTool } from '../tools/office-docs-tool'
 import type { DesktopBus } from '../desktop/bus'
 import type { ApiMessage, AppSettings, ChatRequest, ModelId, Mode, StreamChunk, ToolContext, RunnerEvent } from '../../shared/types'
 
@@ -118,6 +119,10 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
       toolRegistry.register(new DesktopBusTool(input.desktopBus))
       toolNames.push('desktop')
     }
+    // office 文档工具 — 零依赖 OOXML 读写（主应用 OfficeDocsTool 依赖 Windows
+    // officecli.exe，Linux 主机不可用；此处走 python 标准库 helper）
+    toolRegistry.register(new OfficeDocsTool())
+    toolNames.push('office_docs')
 
     const request: ChatRequest = {
       mode: input.mode as Mode,
