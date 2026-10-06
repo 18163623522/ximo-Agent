@@ -203,6 +203,29 @@ describe('desktop-bus — 路由与解析', () => {
     expect(size).toEqual({ width: 1280, height: 800 })
   })
 
+  it('剪贴板为空 — 空态返回空串，且不污染后续操作的失败归因（真实场景）', async () => {
+    let clipEmpty = true
+    const run: RunFn = async (cmd, args) => {
+      if (cmd === 'xclip' && args.includes('-o')) {
+        if (clipEmpty) throw new Error('Error: target STRING not available')
+        return '有内容'
+      }
+      if (cmd === 'wmctrl') return '0x0180000c  0 4642 host 0 0 100 100 Win\n'
+      return ''
+    }
+    const bus = new DesktopBus({ display: ':99', run, appName: () => 'app' })
+
+    // 空剪贴板是正常状态，不是故障
+    expect(await bus.dispatch('clipboard.read')).toEqual({ text: '' })
+
+    // 关键：空读不得把 unavailableReason 置位 → 后续操作必须照常可用
+    const windows = await bus.dispatch('window.list') as { id: string }[]
+    expect(windows).toHaveLength(1)
+
+    clipEmpty = false
+    expect(await bus.dispatch('clipboard.read')).toEqual({ text: '有内容' })
+  })
+
   it('剪贴板 — 读走 xclip -o；写把文本经 stdin 喂给 xclip -i', async () => {
     const calls: { cmd: string; args: string[]; stdin?: string }[] = []
     const run: RunFn = async (cmd, args, _t, stdin) => {

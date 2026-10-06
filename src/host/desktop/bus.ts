@@ -135,9 +135,16 @@ export class DesktopBus {
         return size
       }
       case 'clipboard.read': {
-        // 读剪贴板 — 读取 GUI 应用内容的最快通路（比截图准且无需视觉模型）
-        const text = await this.runCmd(CMD.clipboardRead())
-        return { text }
+        // 读剪贴板 — 读取 GUI 应用内容的最快通路（比截图准且无需视觉模型）。
+        // 注意：剪贴板为空时 xclip 以非 0 退出并报 "target STRING not available"，
+        // 这是正常空态而非故障。此处直接调底层 run，绕开 runCmd 的失败归因缓存
+        // （否则一次空读会把 unavailableReason 置位，导致后续操作全部快速失败）。
+        try {
+          const { cmd, args } = CMD.clipboardRead()
+          return { text: await this.run(cmd, args) }
+        } catch {
+          return { text: '' }
+        }
       }
       case 'clipboard.write': {
         const text = String(params.text ?? '')
