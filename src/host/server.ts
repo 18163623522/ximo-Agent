@@ -13,6 +13,7 @@ import { join } from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { parseClientMsg, HOST_VERSION, HostMsg } from './protocol'
 import { runTask } from './agent/task-runner'
+import { DesktopBus } from './desktop/bus'
 import { HostConfig, loadConfig, tasksDir, workspaceDir, ensureToken } from './config'
 import type { HostTaskRecord, RunnerEvent } from '../shared/types/cockpit'
 
@@ -22,6 +23,8 @@ export type TaskRecord = HostTaskRecord
 export interface HostDeps {
   /** 覆盖审批超时（测试用） */
   approvalTimeoutMs?: number
+  /** 注入 desktop-bus（测试用 fake 后端）；缺省按 config.display 自建 */
+  desktopBus?: DesktopBus
 }
 
 export interface HostServer {
@@ -44,6 +47,10 @@ export function createHostServer(opts?: {
   const pendingApprovals = new Map<string, { resolve: (allow: boolean) => void; timer: NodeJS.Timeout }>()
   const conns = new Set<WebSocket>()
   let queue: Promise<void> = Promise.resolve()
+
+  // desktop-bus — 桌面 API 总线（阶段 2）；注入优先，否则按 config.display 自建
+  const desktopBus = opts?.deps?.desktopBus ?? new DesktopBus({ display: config.display })
+  desktopBus.onEvent((e) => broadcast({ t: 'desktop.event', kind: e.kind, data: e.data }))
 
   const broadcast = (msg: HostMsg): void => {
     const raw = JSON.stringify(msg)
@@ -116,6 +123,7 @@ export function createHostServer(opts?: {
         baseUrl: config.baseUrl,
         apiKey: config.apiKey,
         model: config.model,
+        desktopBus,
         signal: controller.signal,
         onEvent,
         approval: (tool, summary) => requestApproval(id, tool, summary),
@@ -192,6 +200,11 @@ export function createHostServer(opts?: {
           tasks.get(msg.id)?.controller.abort()
         } else if (msg.t === 'approval.respond') {
           pendingApprovals.get(msg.reqId)?.resolve(msg.allow)
+        } else if (msg.t === 'desktop.request') {
+          // desktop-bus — 应答与事件均走本连接/广播（阶段 2）
+          void desktopBus.dispatch(msg.action, msg.params ?? {})
+            .then((data) => ws.send(JSON.stringify({ t: 'desktop.reply', reqId: msg.reqId, ok: true, data })))
+            .catch((e: unknown) => ws.send(JSON.stringify({ t: 'desktop.reply', reqId: msg.reqId, ok: false, error: (e as Error).message.slice(0, 300) })))
         }
       })
       ws.on('close', () => conns.delete(ws))

@@ -5,7 +5,7 @@
 // 版本策略：字段只增不改；新增 `t` 类型时 version +1，旧消息不得删除或改义。
 
 /** 主机协议版本 — 驾驶舱按 hello.version 决定兼容性 */
-export const HOST_VERSION = 0
+export const HOST_VERSION = 1
 
 // ---------- 驾驶舱 → 主机 ----------
 
@@ -25,6 +25,7 @@ export interface ApprovalRespondMsg { t: 'approval.respond'; reqId: string; allo
 export interface PingMsg { t: 'ping' }
 
 export type ClientMsg = TaskDispatchMsg | TaskCancelMsg | ApprovalRespondMsg | PingMsg
+  | DesktopRequestMsg
 
 // ---------- 主机 → 驾驶舱 ----------
 
@@ -78,7 +79,61 @@ export interface ErrorMsg { t: 'error'; code: string; message: string }
 export interface PongMsg { t: 'pong' }
 
 export type HostMsg = HelloMsg | TaskAcceptedMsg | TaskStatusMsg | TaskChunkMsg
-  | ApprovalRequestMsg | TaskDoneMsg | ErrorMsg | PongMsg
+  | ApprovalRequestMsg | TaskDoneMsg | ErrorMsg | PongMsg | DesktopReplyMsg | DesktopEventMsg
+
+// ---------- desktop-bus（阶段 2，协议 v1 增量）----------
+// 桌面本体是 API 总线（headless-first）：窗口/应用是结构化数据，GUI 只是渲染端之一。
+// 驾驶舱与主机侧 Agent 共用同一总线 —— 这是「同一办公任务纯 API 零截图完成」的地基。
+
+export type DesktopAction =
+  | 'window.list'   // 结构化窗口树（按进程分组）
+  | 'window.op'     // activate/close/move/resize/minimize/maximize/restore
+  | 'app.launch'    // 启动应用（脱离会话常驻）
+  | 'app.list'      // 运行中的应用（按进程聚合窗口）
+  | 'key'           // 按键（如 "ctrl+s"、"Return"）
+  | 'type'          // 输入文本到聚焦窗口
+  | 'active'        // 当前聚焦窗口
+
+/** 合法动作集合 — 协议校验用 */
+export const DESKTOP_ACTIONS: DesktopAction[] = [
+  'window.list', 'window.op', 'app.launch', 'app.list', 'key', 'type', 'active',
+]
+
+export interface DesktopRequestMsg {
+  t: 'desktop.request'
+  reqId: string
+  action: DesktopAction
+  params?: Record<string, unknown>
+}
+
+export interface DesktopReplyMsg {
+  t: 'desktop.reply'
+  reqId: string
+  ok: boolean
+  data?: unknown
+  error?: string
+}
+
+export interface DesktopEventMsg {
+  t: 'desktop.event'
+  kind: 'window' | 'app'
+  /** 变化后的完整快照（窗口列表 / 应用列表），消费方无需自维护增量 */
+  data: unknown
+}
+
+/** 结构化窗口条目 — window.list 与 desktop.event 的数据形态 */
+export interface DesktopWindow {
+  /** X 窗口 id，形如 0x03c00007 */
+  id: string
+  pid: number
+  /** 进程名（/proc/<pid>/comm），空串表示未知 */
+  app: string
+  title: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
 
 // ---------- REST 查询通道 ----------
 

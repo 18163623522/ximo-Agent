@@ -17,6 +17,8 @@ import { ensureModuleGroupsLoaded } from '../../main/tools/lazy-registry'
 import { toolRegistry } from '../../main/tools/ToolRegistry'
 import { setAllowedWriteRoots } from '../../main/security-guard'
 import { loadSettings, saveSettings } from '../../main/store'
+import { DesktopBusTool } from '../tools/desktop-tool'
+import type { DesktopBus } from '../desktop/bus'
 import type { ApiMessage, ChatRequest, ModelId, Mode, StreamChunk, ToolContext, RunnerEvent } from '../../shared/types'
 
 // 事件类型与 cockpit-link 契约同源（@shared/types/cockpit），驾驶舱 HostClient 直接消费
@@ -30,6 +32,8 @@ export interface TaskInput {
   baseUrl: string
   apiKey: string
   model: string
+  /** 桌面 API 总线 — 提供时注册 desktop 工具（阶段 2 纯 API 零截图路径） */
+  desktopBus?: DesktopBus
   signal: AbortSignal
   onEvent: (e: RunnerEvent) => void
   /** ask 类工具的审批回调（server 侧实现超时与广播） */
@@ -92,6 +96,13 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
     await ensureSettings({ baseUrl: input.baseUrl, apiKey: input.apiKey, model: input.model })
     await ensureModuleGroupsLoaded(HOST_TOOL_GROUPS)
 
+    // desktop 工具 — 总线可用时注册并纳入工具清单（每次运行覆盖注册，保持单例一致）
+    const toolNames = [...HOST_TOOL_NAMES]
+    if (input.desktopBus?.enabled) {
+      toolRegistry.register(new DesktopBusTool(input.desktopBus))
+      toolNames.push('desktop')
+    }
+
     const request: ChatRequest = {
       mode: input.mode as Mode,
       model: input.model as ModelId,
@@ -100,7 +111,7 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
       temperature: 0.7,
       maxTokens: 8192,
       messages: [{ role: 'user', content: input.task }] as ApiMessage[],
-      tools: toolRegistry.getByNames(HOST_TOOL_NAMES).map(t => t.definition),
+      tools: toolRegistry.getByNames(toolNames).map(t => t.definition),
       sessionId: input.id,
       autoModeLevel: 'off', // ask 类操作 → requestConfirmation → 驾驶舱审批
     }

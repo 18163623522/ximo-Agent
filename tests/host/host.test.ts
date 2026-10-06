@@ -15,6 +15,7 @@ import { join } from 'path'
 import { mkdirSync, existsSync } from 'fs'
 import WebSocket from 'ws'
 import { createHostServer, HostServer } from '../../src/host/server'
+import { HOST_VERSION } from '../../src/shared/types/cockpit'
 
 // ---------- electron mock（先于一切导入生效） ----------
 
@@ -197,7 +198,8 @@ describe('agent-hostd — cockpit-link 契约（真 agent-loop）', () => {
     const c = connect(18022)
     await c.opened
     const hello = await c.wait(m => m.t === 'hello')
-    expect(hello.version).toBe(0)
+    // 版本跟随契约常量（新增 desktop.* 消息 → v1）；server 必须与 shared 声明一致
+    expect(hello.version).toBe(HOST_VERSION)
     c.close()
   })
 

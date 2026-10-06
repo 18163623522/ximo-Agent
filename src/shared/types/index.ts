@@ -36,10 +36,11 @@ export type { McpTransport, McpServerConfig } from './mcp'
 
 export type { VirtualDesktopInfo, DesktopWindowInfo, DesktopActionResult } from './desktop'
 
-export { HOST_VERSION } from './cockpit'
+export { HOST_VERSION, DESKTOP_ACTIONS } from './cockpit'
 export type {
   ClientMsg, HostMsg, TaskDispatchMsg, TaskCancelMsg, ApprovalRespondMsg, PingMsg,
   HelloMsg, TaskAcceptedMsg, TaskStatusMsg, TaskChunkMsg, ApprovalRequestMsg,
   TaskDoneMsg, ErrorMsg, PongMsg, RunnerEvent, TaskChunkDelta,
-  HostTaskRecord, HostHealth, HostStatus, HostStatusInfo
+  HostTaskRecord, HostHealth, HostStatus, HostStatusInfo,
+  DesktopAction, DesktopRequestMsg, DesktopReplyMsg, DesktopEventMsg, DesktopWindow
 } from './cockpit'

@@ -16,7 +16,7 @@ export type {
 } from '../shared/types/cockpit'
 export { HOST_VERSION } from '../shared/types/cockpit'
 
-import type { ClientMsg } from '../shared/types/cockpit'
+import { DESKTOP_ACTIONS, type ClientMsg, type DesktopAction } from '../shared/types/cockpit'
 
 /** 解析并校验客户端消息 — 非法返回 null（调用方回 error 帧并断开） */
 export function parseClientMsg(raw: string): ClientMsg | null {
@@ -36,6 +36,14 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return typeof m.reqId === 'string' && typeof m.allow === 'boolean'
         ? { t: 'approval.respond', reqId: m.reqId, allow: m.allow }
         : null
+    case 'desktop.request': {
+      if (typeof m.reqId !== 'string') return null
+      if (typeof m.action !== 'string' || !DESKTOP_ACTIONS.includes(m.action as DesktopAction)) return null
+      const params = typeof m.params === 'object' && m.params !== null
+        ? m.params as Record<string, unknown>
+        : undefined
+      return { t: 'desktop.request', reqId: m.reqId, action: m.action as DesktopAction, params }
+    }
     case 'ping':
       return { t: 'ping' }
     default:

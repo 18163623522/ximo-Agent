@@ -121,18 +121,25 @@ agent-hostd（Linux 用户态守护进程，Node 单文件 dist-host/agent-hostd
 
 ### P1-1 阶段 2：desktop-bus + 原生应用（预估 1-2 周）——"完全适配"的本体
 - 已定设计：**headless-first**——桌面本体是 API 总线，GUI 只是渲染端之一
-- v1 范围：`window-service`（结构化窗口树，wmctrl/xdotool 后端）、`app-service`
-  （文档/浏览器/终端三个应用 = JSON API）、`event-bus`（窗口/应用事件推送）
-- 协议增量：PROTOCOL.md v1 增加 `desktop.*` 消息；画面流移植现有 `wslcam://`
-  的 ffmpeg MJPEG 方案进镜像
+- **v1 内核已完成（2026-10-06 会话）**：`src/host/desktop/`（backend：xdotool/wmctrl
+  执行层 + 命令构建/解析；bus：路由 + 2s 事件轮询）；协议 v1 增量
+  `desktop.request/reply/event`（HOST_VERSION=1，类型在 shared/types/cockpit.ts，
+  PROTOCOL.md 已同步）；主机 Agent 侧 `desktop` 工具（src/host/tools/desktop-tool.ts，
+  task-runner 按总线可用性注册，Permission.ts 全量 allow）——驾驶舱（HostClient.
+  desktopRequest）与主机 Agent 是同一总线的同等客户端。总线依赖主机侧 Xvfb
+  （config.display，默认 :99，XIMO_HOST_DISPLAY 可覆盖，空 = 停用）
+- **待做**：驾驶舱桌面面板（window.list/app.launch UI；事件经 host:event 已可透传）、
+  画面流移植（wslcam:// 的 ffmpeg MJPEG 方案进镜像/主机）、文档/浏览器 app 的
+  语义化 JSON API
 - **验收**：同一办公任务纯 API 零截图完成（这是阶段 2 的灵魂指标）
 
-### P1-2 视觉回路（0.5-1 天，独立小刀，独立可交付）
-- 现状：`ToolResult.screenshot` 只到 UI 工具卡片，模型看不到（deepseek-flash 原生
-  多模态，是应用侧管道没接）
-- 做法：`src/main/deepseek/tool-execution.ts` 组装 tool 消息时把 screenshot 转为
-  `image_url` content part；`api-request-builder.ts` 透传；`sub-agent.ts` 同步
-- **验收**：Agent 调 `wsl_desktop screenshot` 后能描述屏幕内容
+### P1-2 视觉回路（✅ 已完成，2026-10-06 会话——走留存路径而非 image_url 直传）
+- 实际断点：wsl_desktop 截图 base64 后即删文件，Agent 拿不到路径喂 vision_analyze
+- 已修：截图 PNG 留存 Windows 临时目录（desktop-ops.ts，/mnt/c 挂载 + 24h 清理），
+  工具结果携带 `vision_analyze(file_path=…)` 指引 + metadata.screenshotPath
+- 未走 image_url 直传的原因：ContextManager/重建/tokenizer 均按纯字符串处理消息，
+  且 tool 角色多模态的 DeepSeek 行为无法本地验证（400 风险）；若将来要做，先挂
+  ProviderCapabilities 门控并在真实端点验证
 
 ### P1-3 人工接管（0.5-1 天；**先问用户要不要**，此前询问未获答复）
 - 驾驶舱鼠标键盘 → cockpit-link v1 `input.*` 消息 → 镜像内 uinput/xdotool 注入；

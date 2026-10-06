@@ -53,6 +53,10 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'create_tool' },
     { tool: 'knowledge' },
     { tool: 'virtual_desktop' },
+    // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
+    // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
+    // 命令执行不在该工具内（走 terminal_exec 审批）
+    { tool: 'desktop' },
     // WSL 隔离桌面 — 画面/交互类操作自动允许（exec/launch 在 ask 列表）
     { tool: 'wsl_desktop', subject: 'screenshot' },
     { tool: 'wsl_desktop', subject: 'click' },
@@ -133,6 +137,10 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'create_tool' },
     { tool: 'knowledge' },
     { tool: 'virtual_desktop' },
+    // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
+    // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
+    // 命令执行不在该工具内（走 terminal_exec 审批）
+    { tool: 'desktop' },
     // WSL 隔离桌面 — 画面/交互类操作自动允许（exec/launch 在 ask 列表）
     { tool: 'wsl_desktop', subject: 'screenshot' },
     { tool: 'wsl_desktop', subject: 'click' },

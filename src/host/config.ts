@@ -22,6 +22,8 @@ export interface HostConfig {
   mode: string
   /** 审批等待时长 ms，超时视为拒绝（fail-closed） */
   approvalTimeoutMs: number
+  /** desktop-bus 使用的 X 显示（Xvfb 桌面会话）；空 = 桌面功能停用 */
+  display: string
 }
 
 export const DEFAULT_CONFIG: HostConfig = {
@@ -31,6 +33,7 @@ export const DEFAULT_CONFIG: HostConfig = {
   model: process.env.XIMO_HOST_MODEL || 'deepseek-chat',
   mode: process.env.XIMO_HOST_MODE || 'coding',
   approvalTimeoutMs: Number(process.env.XIMO_HOST_APPROVAL_TIMEOUT_MS) || 120_000,
+  display: process.env.XIMO_HOST_DISPLAY ?? ':99',
 }
 
 export function configDir(): string {

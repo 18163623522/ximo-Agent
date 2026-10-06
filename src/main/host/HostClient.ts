@@ -15,6 +15,7 @@
 import WebSocket from 'ws'
 import type {
   ClientMsg, HostMsg, HostTaskRecord, HostHealth, HostStatusInfo, RunnerEvent,
+  DesktopAction,
 } from '@shared/types'
 import { HOST_VERSION } from '@shared/types'
 
@@ -40,6 +41,11 @@ interface PendingDispatch {
   timer: ReturnType<typeof setTimeout>
 }
 
+interface PendingDesktop {
+  resolve: (v: { ok: boolean; data?: unknown; error?: string }) => void
+  timer: ReturnType<typeof setTimeout>
+}
+
 export class HostClient {
   private ws: WebSocket | null = null
   private url = ''
@@ -47,6 +53,7 @@ export class HostClient {
   private status: HostStatusInfo = { status: 'disconnected', url: '' }
   private tasks = new Map<string, HostTaskRecord>()
   private pendingDispatch = new Map<string, PendingDispatch>()
+  private pendingDesktop = new Map<string, PendingDesktop>()
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private graceTimer: ReturnType<typeof setTimeout> | null = null
@@ -217,6 +224,15 @@ export class HostClient {
         // 幂等冲突等协议级错误 — 若在等待 dispatch 应答，直接结算
         if (msg.code === 'duplicate_id') this.failPendingDispatch(msg.message)
         break
+      case 'desktop.reply': {
+        const p = this.pendingDesktop.get(msg.reqId)
+        if (p) {
+          clearTimeout(p.timer)
+          this.pendingDesktop.delete(msg.reqId)
+          p.resolve(msg.ok ? { ok: true, data: msg.data } : { ok: false, error: msg.error })
+        }
+        break
+      }
       case 'approval.request':
         break // 以原始事件形式透传给渲染层，由 UI 弹确认框
     }
@@ -263,6 +279,11 @@ export class HostClient {
       p.resolve({ ok: false, error })
       this.pendingDispatch.delete(id)
     }
+    for (const [reqId, p] of this.pendingDesktop) {
+      clearTimeout(p.timer)
+      p.resolve({ ok: false, error })
+      this.pendingDesktop.delete(reqId)
+    }
   }
 
   // ------------------------------------------------------------------
@@ -289,6 +310,24 @@ export class HostClient {
 
   cancel(id: string): void {
     this.send({ t: 'task.cancel', id })
+  }
+
+  /** desktop-bus 调用 — 等待 desktop.reply（reqId 由客户端生成便于关联） */
+  desktopRequest(action: DesktopAction, params?: Record<string, unknown>): Promise<{ ok: boolean; data?: unknown; error?: string }> {
+    if (!this.isConnected()) return Promise.resolve({ ok: false, error: '未连接到主机' })
+    const reqId = `dreq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.pendingDesktop.delete(reqId)
+        resolve({ ok: false, error: '主机未在 10s 内应答桌面调用' })
+      }, DISPATCH_TIMEOUT_MS)
+      this.pendingDesktop.set(reqId, { resolve, timer })
+      if (!this.send({ t: 'desktop.request', reqId, action, params })) {
+        clearTimeout(timer)
+        this.pendingDesktop.delete(reqId)
+        resolve({ ok: false, error: '发送失败' })
+      }
+    })
   }
 
   respondApproval(reqId: string, allow: boolean): void {
