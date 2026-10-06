@@ -83,6 +83,11 @@ qemu-img convert -f raw -O vhdx os/mkosi/out/ximo-os_0.1.raw ximo-os_0.1.vhdx
 
 ## 验收清单（阶段 1 达成标准）
 
+> **自动化验收**：QEMU 引导后运行 `npm run verify:image -- --token <令牌>`
+> （脚本 `os/scripts/verify-image.mjs`）自动核对清单第 2-5 项；
+> 第 1 项（启动耗时）需人工观察 QEMU 拉起至 health 就绪的时长。
+
+
 - [ ] 全新 VM 从镜像启动到 agent-hostd 就绪 ≤ 2 分钟
 - [ ] `journalctl -u agent-hostd` 可见首次生成的访问令牌
 - [ ] Windows 宿主机 `curl http://<VM IP>:17890/api/health -H "Authorization: Bearer <令牌>"` 返回 200

@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "host:build": "node scripts/host-build.mjs",
-    "host:start": "node dist-host/agent-hostd.cjs"
+    "host:start": "node dist-host/agent-hostd.cjs",
+    "verify:image": "node os/scripts/verify-image.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
