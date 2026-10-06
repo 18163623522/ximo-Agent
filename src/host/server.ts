@@ -172,7 +172,7 @@ export function createHostServer(opts?: {
     if (req.url === '/api/screen/snapshot') {
       if (!authed) return json(401, { ok: false, error: '需要 Bearer 令牌' })
       const shot = await screen.snapshot()
-      return json(200, shot ? { ok: true, screenshot: shot } : { ok: false, error: '截图失败（桌面会话未就绪）' })
+      return json(200, shot ? { ok: true, screenshot: shot.dataUrl } : { ok: false, error: '截图失败（桌面会话未就绪）' })
     }
     if (req.url === '/api/screen/stream') {
       if (!authed) {

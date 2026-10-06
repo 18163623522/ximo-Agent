@@ -249,7 +249,7 @@ describe('desktop-bus — 路由与解析', () => {
     expect(res.content.startsWith('[')).toBe(false) // 不是 JSON 数组
   })
 
-  it('screen.snapshot — 兜底截图走注入的采集器；未注入时明确报错', async () => {
+  it('screen.snapshot — 兜底截图走注入的采集器并回传留存路径；未注入时明确报错', async () => {
     const withShot = new DesktopBus(fakeDeps(fakeRun().run))
     // fakeDeps 未注入 snapshot → 明确的可读错误（而非静默失败）
     await expect(withShot.dispatch('screen.snapshot')).rejects.toThrow('截图能力未启用')
@@ -257,9 +257,13 @@ describe('desktop-bus — 路由与解析', () => {
     const inj = new DesktopBus({
       display: ':99',
       run: fakeRun().run,
-      snapshot: async () => 'data:image/png;base64,SHOT',
+      snapshot: async () => ({ dataUrl: 'data:image/png;base64,SHOT', savedPath: '/tmp/ximo-os-shots/shot-1.png' }),
     })
-    expect(await inj.dispatch('screen.snapshot')).toEqual({ screenshot: 'data:image/png;base64,SHOT' })
+    // savedPath 是视觉回路的关键：Agent 需把它交给 vision_analyze(file_path=…)
+    expect(await inj.dispatch('screen.snapshot')).toEqual({
+      screenshot: 'data:image/png;base64,SHOT',
+      savedPath: '/tmp/ximo-os-shots/shot-1.png',
+    })
 
     const failing = new DesktopBus({ display: ':99', run: fakeRun().run, snapshot: async () => null })
     await expect(failing.dispatch('screen.snapshot')).rejects.toThrow('截图失败')
@@ -377,7 +381,7 @@ describe('desktop-bus — 协议回路（真 server + 真 HostClient）', () => 
   it('屏幕端点 — 快照/画面流均要求 Bearer 鉴权，快照走注入的采集器', { timeout: 20_000 }, async () => {
     const f = fakeRun()
     const fakeScreen = {
-      snapshot: async (): Promise<string | null> => 'data:image/png;base64,AAAA',
+      snapshot: async (): Promise<{ dataUrl: string; savedPath?: string } | null> => ({ dataUrl: 'data:image/png;base64,AAAA' }),
       ensureStream: async (): Promise<void> => {},
       upstreamUrl: 'http://127.0.0.1:1/stream', // 无人监听 → 流 503 路径
     }

@@ -19,7 +19,7 @@ import { setAllowedWriteRoots } from '../../main/security-guard'
 import { loadSettings, saveSettings } from '../../main/store'
 import { DesktopBusTool } from '../tools/desktop-tool'
 import type { DesktopBus } from '../desktop/bus'
-import type { ApiMessage, ChatRequest, ModelId, Mode, StreamChunk, ToolContext, RunnerEvent } from '../../shared/types'
+import type { ApiMessage, AppSettings, ChatRequest, ModelId, Mode, StreamChunk, ToolContext, RunnerEvent } from '../../shared/types'
 
 // 事件类型与 cockpit-link 契约同源（@shared/types/cockpit），驾驶舱 HostClient 直接消费
 export type { RunnerEvent }
@@ -47,7 +47,7 @@ export interface TaskOutput {
 }
 
 /** 主机可移植工具域 — 与 lazy-registry 的模块组一一对应 */
-export const HOST_TOOL_GROUPS = ['file_system', 'terminal', 'git', 'web_intelligence', 'memory', 'skill']
+export const HOST_TOOL_GROUPS = ['file_system', 'terminal', 'git', 'web_intelligence', 'memory', 'skill', 'vision']
 
 const HOST_TOOL_NAMES = [
   // file_system
@@ -61,6 +61,8 @@ const HOST_TOOL_NAMES = [
   'memory_update', 'knowledge',
   // skill
   'skill_record', 'skill_invoke', 'agent_expert', 'create_tool',
+  // vision — 配套 desktop 截图：Agent 截屏后据此理解画面内容
+  'vision_analyze',
 ]
 
 const ORIGINAL_CWD = process.cwd()
@@ -74,13 +76,17 @@ function argsSummary(args: unknown): string {
 }
 
 // settings 引导 — 把主机配置写进主应用 settings（provider 解析由此走通），只写一次
-let settingsReady: Promise<void> | null = null
-function ensureSettings(cfg: { baseUrl: string; apiKey: string; model: string }): Promise<void> {
+// 返回已加载设置：vision 配置等非主机专属字段沿用主应用默认值（如免费视觉模型）
+let settingsReady: Promise<AppSettings> | null = null
+function ensureSettings(cfg: { baseUrl: string; apiKey: string; model: string }): Promise<AppSettings> {
   settingsReady ??= (async () => {
     const s = await loadSettings()
     if (s.apiKey !== cfg.apiKey || s.baseUrl !== cfg.baseUrl || s.model !== cfg.model) {
-      await saveSettings({ ...s, apiKey: cfg.apiKey, baseUrl: cfg.baseUrl, model: cfg.model as ModelId })
+      const next = { ...s, apiKey: cfg.apiKey, baseUrl: cfg.baseUrl, model: cfg.model as ModelId }
+      await saveSettings(next)
+      return next
     }
+    return s
   })().catch((e) => { settingsReady = null; throw e })
   return settingsReady
 }
@@ -93,7 +99,7 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
   let failedError: string | undefined
 
   try {
-    await ensureSettings({ baseUrl: input.baseUrl, apiKey: input.apiKey, model: input.model })
+    const settings = await ensureSettings({ baseUrl: input.baseUrl, apiKey: input.apiKey, model: input.model })
     await ensureModuleGroupsLoaded(HOST_TOOL_GROUPS)
 
     // desktop 工具 — 总线可用时注册并纳入工具清单（每次运行覆盖注册，保持单例一致）
@@ -154,9 +160,9 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
       webCacheEnabled: true,
       helperCommandTimeout: 30,
       mcpConnectTimeout: 30,
-      visionApiKey: '',
-      visionBaseUrl: '',
-      visionModel: '',
+      visionApiKey: settings.visionApiKey ?? '',
+      visionBaseUrl: settings.visionBaseUrl ?? 'https://api.agnes-ai.cn/v1',
+      visionModel: settings.visionModel ?? 'agnes-2.5-flash',
       mode: input.mode as Mode,
     }
 

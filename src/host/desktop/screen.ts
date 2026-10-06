@@ -19,6 +19,8 @@ export interface ScreenDeps {
   width?: number
   height?: number
   run?: RunFn
+  /** 截图留存目录（默认 /tmp/ximo-os-shots）— 供 vision_analyze 读取 */
+  shotsDir?: string
 }
 
 export class ScreenCapture {
@@ -30,10 +32,14 @@ export class ScreenCapture {
   private streamingSize: string | null = null
   private ensurePromise: Promise<void> | null = null
 
+  /** 截图留存目录 — 视觉回路的关键：文件留存后 Agent 才能把路径交给 vision_analyze */
+  private readonly shotsDir: string
+
   constructor(private readonly deps: ScreenDeps) {
     this.run = deps.run ?? makeRunner(deps.display)
     this.fallbackWidth = deps.width ?? 1280
     this.fallbackHeight = deps.height ?? 800
+    this.shotsDir = deps.shotsDir ?? '/tmp/ximo-os-shots'
   }
 
   /** 确保画面流 ffmpeg 存活 — http listen 单次会话，客户端断开后退出，自愈式重拉 */
@@ -75,14 +81,22 @@ export class ScreenCapture {
     this.streamingSize = size
   }
 
-  /** 单帧截图 — 返回 base64 data URL；流不可用时的兜底渲染源 */
-  async snapshot(): Promise<string | null> {
+  /**
+   * 单帧截图 — 返回 base64 data URL 与留存路径。
+   * savedPath 是视觉回路的关键：Agent 需把可传递的路径交给 vision_analyze
+   * （模型无法接收 base64 句柄）。24 小时前的旧截图自动清理防堆积。
+   */
+  async snapshot(): Promise<{ dataUrl: string; savedPath?: string } | null> {
     try {
-      const tmp = `/tmp/ximo-os-screen-${Date.now()}.png`
-      await this.run('import', ['-window', 'root', tmp], 8000)
-      const base64 = (await this.run('base64', ['-w0', tmp], 8000)).trim()
-      void this.run('bash', ['-c', `rm -f "${tmp}"`]).catch(() => {})
-      return base64 ? `data:image/png;base64,${base64}` : null
+      const name = `shot-${Date.now()}.png`
+      const file = `${this.shotsDir}/${name}`
+      await this.run('bash', ['-c', `mkdir -p ${this.shotsDir}`], 5000)
+      await this.run('import', ['-window', 'root', file], 8000)
+      const base64 = (await this.run('base64', ['-w0', file], 8000)).trim()
+      if (!base64) return null
+      // 顺手清理 24h 前的旧截图（失败不影响本次返回）
+      void this.run('bash', ['-c', `find ${this.shotsDir} -name 'shot-*.png' -mmin +1440 -delete 2>/dev/null`], 5000).catch(() => {})
+      return { dataUrl: `data:image/png;base64,${base64}`, savedPath: file }
     } catch {
       return null
     }

@@ -17,7 +17,7 @@ export interface DesktopBusDeps {
   launch?: (app: string, args: string[]) => { pid?: number }
   appName?: (pid: number) => string
   /** 截图兜底 — screen.snapshot 动作的数据源（server 侧注入 ScreenCapture） */
-  snapshot?: () => Promise<string | null>
+  snapshot?: () => Promise<{ dataUrl: string; savedPath?: string } | null>
 }
 
 export const WINDOW_OPS = ['activate', 'close', 'move', 'resize', 'minimize', 'maximize', 'restore'] as const
@@ -144,9 +144,10 @@ export class DesktopBus {
       case 'screen.snapshot': {
         // 兜底感知 — 纯 API 不足以判断画面时（如确认 GUI 渲染结果）用
         if (!this.deps.snapshot) throw new Error('截图能力未启用（主机未配置画面采集）')
-        const dataUrl = await this.deps.snapshot()
-        if (!dataUrl) throw new Error('截图失败（桌面会话未就绪）')
-        return { screenshot: dataUrl }
+        const shot = await this.deps.snapshot()
+        if (!shot) throw new Error('截图失败（桌面会话未就绪）')
+        // savedPath 交回 Agent → 可直接喂给 vision_analyze(file_path=…)
+        return { screenshot: shot.dataUrl, ...(shot.savedPath ? { savedPath: shot.savedPath } : {}) }
       }
       default:
         throw new Error(`未知的桌面操作: ${String(action)}`)

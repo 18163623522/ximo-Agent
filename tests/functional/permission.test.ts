@@ -77,6 +77,15 @@ describe('[功能] 权限决策引擎', () => {
       expect(evaluate(OFFICE_DEFAULT_CONFIG, 'web_fetch', '')).toBe('allow')
     })
 
+    it('视觉分析 allow（只读读图，与 file_read/web_fetch 同级）', () => {
+      // 回归：vision_analyze 此前未列入任何配置 → 回退 defaultDecision（coding 下为
+      // undefined）→ 保守 ask。只读工具被判 ask 会让读图也弹审批，主机侧更会
+      // fail-closed 直接拒绝（无审批渠道）导致视觉回路断裂。
+      for (const cfg of [CODING_DEFAULT_CONFIG, OFFICE_DEFAULT_CONFIG]) {
+        expect(evaluate(cfg, 'vision_analyze', '')).toBe('allow')
+      }
+    })
+
     it('写操作 ask', () => {
       expect(evaluate(OFFICE_DEFAULT_CONFIG, 'file_write', '')).toBe('ask')
       expect(evaluate(OFFICE_DEFAULT_CONFIG, 'file_edit', '')).toBe('ask')

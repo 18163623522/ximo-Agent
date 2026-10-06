@@ -53,6 +53,9 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'create_tool' },
     { tool: 'knowledge' },
     { tool: 'virtual_desktop' },
+    // 视觉分析 — 只读（读图片走视觉模型），与 file_read/web_fetch 同级；
+    // 此前未列入任何 allow → 回退保守 ask，导致读图也要审批
+    { tool: 'vision_analyze' },
     // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）
@@ -137,6 +140,9 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'create_tool' },
     { tool: 'knowledge' },
     { tool: 'virtual_desktop' },
+    // 视觉分析 — 只读（读图片走视觉模型），与 file_read/web_fetch 同级；
+    // 此前未列入任何 allow → 回退保守 ask，导致读图也要审批
+    { tool: 'vision_analyze' },
     // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）

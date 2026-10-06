@@ -50,7 +50,7 @@ export class DesktopBusTool implements Tool {
       '典型工作流：app.available 看有什么可用 → app.launch 打开应用 → window.list 确认窗口出现 → window.op(activate) 聚焦 → type/key 输入。全程纯 API，无需截图。\n' +
       '鼠标: mouse.move 移动（x,y）| mouse.click 点击（x,y,button: left/middle/right）| mouse.scroll 滚动（direction: up/down/left/right, amount 格数）；screen.size 读屏幕几何（交互坐标换算）。\n' +
       '剪贴板: clipboard.read 读剪贴板（读取当前应用内容的首选方式——比截图快且准，无需视觉模型）| clipboard.write 写剪贴板（text 必填，随后用 key ctrl+v 粘贴到目标应用）。\n' +
-      '截图: screen.snapshot 单帧截图（兜底感知——仅在纯 API 无法判断时用，如确认 GUI 渲染结果）。',
+      '截图: screen.snapshot 单帧截图（兜底感知——仅在纯 API 无法判断时用，如确认 GUI 渲染结果）。截图会留存文件并返回路径，需要理解画面内容时把该路径传给 vision_analyze(file_path=…)。',
     parameters: {
       type: 'object',
       properties: {
@@ -80,22 +80,25 @@ export class DesktopBusTool implements Tool {
       return this.error(toolCall.id, `未知操作: ${String(action)}（可选: ${ACTIONS.join('/')}）`)
     }
     try {
-      const data = await this.bus.dispatch(action, toolCall.arguments)
-      onChunk?.({ toolStatus: 'done', toolName: 'desktop' })
-
-      // 截图动作 — base64 只回状态（避免撑爆上下文），提示改用 vision 工具分析
+      // 截图动作 — base64 只回状态（避免撑爆上下文），但要给出可传递的文件路径，
+      // 否则 Agent 无法把画面交给 vision_analyze（视觉回路断裂）
       if (action === 'screen.snapshot') {
-        const shot = (data as { screenshot?: string })?.screenshot
+        const data = await this.bus.dispatch(action, toolCall.arguments) as { screenshot?: string; savedPath?: string }
+        onChunk?.({ toolStatus: 'done', toolName: 'desktop' })
         return {
           toolCallId: toolCall.id,
           toolName: 'desktop',
-          content: '📸 桌面截图已获取（base64 已随结果附带，供 UI 展示）。注意：纯 API 动作（window.list / clipboard.read）通常比截图更快更准。',
+          content: data.savedPath
+            ? `📸 桌面截图已获取并留存：${data.savedPath}\n需要理解画面内容时，调用 vision_analyze 并传 file_path="${data.savedPath}"。`
+            : '📸 桌面截图已获取（供 UI 展示）。提示：纯 API 动作（window.list / clipboard.read）通常比截图更快更准。',
           success: true,
-          ...(shot ? { screenshot: shot } : {}),
-          metadata: { action },
+          ...(data.screenshot ? { screenshot: data.screenshot } : {}),
+          metadata: { action, ...(data.savedPath ? { savedPath: data.savedPath } : {}) },
         }
       }
 
+      const data = await this.bus.dispatch(action, toolCall.arguments)
+      onChunk?.({ toolStatus: 'done', toolName: 'desktop' })
       return {
         toolCallId: toolCall.id,
         toolName: 'desktop',
