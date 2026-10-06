@@ -127,6 +127,16 @@ export class DesktopBus {
         if (!size.width || !size.height) throw new Error('无法读取屏幕几何')
         return size
       }
+      case 'clipboard.read': {
+        // 读剪贴板 — 读取 GUI 应用内容的最快通路（比截图准且无需视觉模型）
+        const text = await this.runCmd(CMD.clipboardRead())
+        return { text }
+      }
+      case 'clipboard.write': {
+        const text = String(params.text ?? '')
+        await this.runCmd(CMD.clipboardWrite(text), text)
+        return { done: true, length: text.length }
+      }
       default:
         throw new Error(`未知的桌面操作: ${String(action)}`)
     }
@@ -215,9 +225,9 @@ export class DesktopBus {
     return Number.isFinite(n) ? Math.round(n) : 0
   }
 
-  private async runCmd({ cmd, args }: { cmd: string; args: string[] }): Promise<string> {
+  private async runCmd({ cmd, args }: { cmd: string; args: string[] }, stdin?: string): Promise<string> {
     try {
-      const out = await this.run(cmd, args)
+      const out = await this.run(cmd, args, undefined, stdin)
       this.unavailableReason = null
       return out
     } catch (e) {

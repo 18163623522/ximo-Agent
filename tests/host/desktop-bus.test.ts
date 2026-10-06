@@ -180,6 +180,25 @@ describe('desktop-bus — 路由与解析', () => {
     expect(size).toEqual({ width: 1280, height: 800 })
   })
 
+  it('剪贴板 — 读走 xclip -o；写把文本经 stdin 喂给 xclip -i', async () => {
+    const calls: { cmd: string; args: string[]; stdin?: string }[] = []
+    const run: RunFn = async (cmd, args, _t, stdin) => {
+      calls.push({ cmd, args, stdin })
+      return cmd === 'xclip' && args.includes('-o') ? '文档正文内容' : ''
+    }
+    const bus = new DesktopBus({ display: ':99', run })
+
+    const read = await bus.dispatch('clipboard.read') as { text: string }
+    expect(read.text).toBe('文档正文内容')
+    expect(calls[0]).toEqual({ cmd: 'xclip', args: ['-selection', 'clipboard', '-o'], stdin: undefined })
+
+    const written = await bus.dispatch('clipboard.write', { text: '待粘贴文本' }) as { done: boolean; length: number }
+    expect(written).toEqual({ done: true, length: 5 })
+    expect(calls[1].cmd).toBe('xclip')
+    expect(calls[1].args).toEqual(['-selection', 'clipboard', '-i'])
+    expect(calls[1].stdin).toBe('待粘贴文本')
+  })
+
   it('画面采集跟随分辨率 — 尺寸变化时重启 ffmpeg（否则画面被裁切）', async () => {
     let geom = '1280 800'
     let ffmpegAlive = false

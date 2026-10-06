@@ -9,14 +9,14 @@ import { execFile, spawn } from 'child_process'
 import { existsSync, readFileSync } from 'fs'
 import type { DesktopWindow } from '../../shared/types/cockpit'
 
-/** 执行一条 X 命令，返回 stdout */
-export type RunFn = (cmd: string, args: string[], timeoutMs?: number) => Promise<string>
+/** 执行一条 X 命令，返回 stdout；stdin 可选（剪贴板写入等需要喂入数据） */
+export type RunFn = (cmd: string, args: string[], timeoutMs?: number, stdin?: string) => Promise<string>
 
-/** 默认执行器 — DISPLAY 注入 + 超时保护 */
+/** 默认执行器 — DISPLAY 注入 + 超时保护 + 可选 stdin */
 export function makeRunner(display: string): RunFn {
-  return (cmd, args, timeoutMs = 5000) =>
+  return (cmd, args, timeoutMs = 5000, stdin) =>
     new Promise((resolve, reject) => {
-      execFile(cmd, args, {
+      const child = execFile(cmd, args, {
         timeout: timeoutMs,
         env: { ...process.env, DISPLAY: display },
         encoding: 'utf-8',
@@ -24,6 +24,11 @@ export function makeRunner(display: string): RunFn {
         if (err) reject(err instanceof Error ? err : new Error(String(err)))
         else resolve(String(stdout))
       })
+      if (stdin !== undefined) {
+        child.stdin?.end(stdin)
+      } else {
+        child.stdin?.end()
+      }
     })
 }
 
@@ -114,6 +119,9 @@ export const CMD = {
   mouseScroll: (x: number, y: number, amount: number, button: number): { cmd: string; args: string[] } =>
     ({ cmd: 'xdotool', args: ['mousemove', String(x), String(y), 'click', '--repeat', String(amount), String(button)] }),
   displayGeometry: (): { cmd: string; args: string[] } => ({ cmd: 'xdotool', args: ['getdisplaygeometry'] }),
+  // 剪贴板 — 读 GUI 应用内容的最快通路（比截图快且准，无需视觉模型）
+  clipboardRead: (): { cmd: string; args: string[] } => ({ cmd: 'xclip', args: ['-selection', 'clipboard', '-o'] }),
+  clipboardWrite: (text: string): { cmd: string; args: string[] } => ({ cmd: 'xclip', args: ['-selection', 'clipboard', '-i'] }),
 } as const
 
 /** xdotool 鼠标按键编码 — 'left'|'middle'|'right' → 1|2|3；滚轮方向 → 4/5/6/7 */
