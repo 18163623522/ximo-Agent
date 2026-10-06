@@ -38,7 +38,7 @@ jobs:
           sudo apt-get install -y -qq qemu-system-x86 qemu-utils python3-pefile
           # mkosi 25.3 取自 Debian trixie 官方 deb — PyPI 无发布；
           # noble apt 版 24.3 的工具树包清单用旧名（t64 改名后失效）
-          curl -fsSL -o /tmp/mkosi.deb http://deb.debian.org/debian/pool/main/m/mkosi/mkosi_25.3-1_all.deb \
+          curl -fsSL -o /tmp/mkosi.deb http://deb.debian.org/debian/pool/main/m/mkosi/mkosi_25.3-7_all.deb \
             || curl -fsSL http://deb.debian.org/debian/pool/main/m/mkosi/ | grep -o 'mkosi_25[^"]*_all\.deb' | head -1 | sed 's|^|http://deb.debian.org/debian/pool/main/m/mkosi/|' | xargs curl -fsSL -o /tmp/mkosi.deb
           sudo dpkg-deb -x /tmp/mkosi.deb /opt/mkosi-253
           echo "/opt/mkosi-253/usr/bin" >> "$GITHUB_PATH"
