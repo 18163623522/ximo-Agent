@@ -115,7 +115,11 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 ⑨ Debian 源密钥环缺失 → 宿主装 `debian-archive-keyring`
 ⑩ 镜像内缺 UEFI 引导器 / ESP 填充工具 → Packages 补 `systemd-boot-efi`；宿主装 `mtools`
 
-**产物**：GitHub 工件 `ximo-os-0.1-raw`（约 1.2 GB raw 磁盘镜像，保留 7 天）
+**产物**：GitHub 工件 `ximo-os-0.1-raw`（raw 磁盘镜像：逻辑 1.2GB / 内容实占 839MB；
+开启工件压缩后传输体积 **362MB**，保留 7 天）。
+体积构成：通用内核+模块+initrd ≈500MB（60%，最大头）、locales+glibc ≈120MB、
+systemd/udev/dbus ≈70MB、nodejs ≈55MB、其余 356 个包 ≈100MB——`apt` 实际只下载
+225MB，安装后 839MB（.deb 压缩 + 模块展开 + locale 生成）
 下载：`gh run download <run-id> -n ximo-os-0.1-raw -D deliverables/ximo-os-image`
 （大文件经不稳定网络可能需重试；`gh api <archive_download_url>` 亦可）
 
