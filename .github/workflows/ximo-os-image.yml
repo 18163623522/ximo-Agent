@@ -73,4 +73,6 @@ jobs:
           name: ximo-os-0.1-raw
           path: os/mkosi/out/*.raw
           retention-days: 7
-          compression-level: 0
+          # 压缩：raw 是稀疏文件（逻辑 1.2GB / 实占 839MB，约 360MB 空洞），
+          # 开压缩后空洞近乎免费（原先 compression-level: 0 按 1.2GB 全量传输）
+          compression-level: 6
