@@ -35,10 +35,14 @@ jobs:
       - name: 安装 mkosi 与 qemu
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq qemu-system-x86 qemu-utils python3-pip
-          # mkosi 25.3（pip）— noble 的 apt 版 24.3 工具树包清单用旧名 libtss2-mu0，
-          # noble 已 t64 改名导致安装失败；25.3 与 WSL trixie 验证版本一致
-          sudo python3 -m pip install --break-system-packages mkosi==25.3
+          sudo apt-get install -y -qq qemu-system-x86 qemu-utils python3-pefile
+          # mkosi 25.3 取自 Debian trixie 官方 deb — PyPI 无发布；
+          # noble apt 版 24.3 的工具树包清单用旧名（t64 改名后失效）
+          curl -fsSL -o /tmp/mkosi.deb http://deb.debian.org/debian/pool/main/m/mkosi/mkosi_25.3-1_all.deb \
+            || curl -fsSL http://deb.debian.org/debian/pool/main/m/mkosi/ | grep -o 'mkosi_25[^"]*_all\.deb' | head -1 | sed 's|^|http://deb.debian.org/debian/pool/main/m/mkosi/|' | xargs curl -fsSL -o /tmp/mkosi.deb
+          sudo dpkg-deb -x /tmp/mkosi.deb /opt/mkosi-253
+          echo "/opt/mkosi-253/usr/bin" >> "$GITHUB_PATH"
+          echo "PYTHONPATH=/opt/mkosi-253/usr/lib/python3/dist-packages" >> "$GITHUB_ENV"
           mkosi --version
 
       - name: 构建 ximo-OS 0.1 磁盘镜像
