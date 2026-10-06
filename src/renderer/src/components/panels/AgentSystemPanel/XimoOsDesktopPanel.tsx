@@ -3,7 +3,7 @@ import {
   X, Server, MousePointerClick, RefreshCw, Send, Loader2, Radio,
   AppWindow, Keyboard, ChevronRight, ClipboardPaste,
 } from 'lucide-react'
-import type { DesktopWindow, DesktopScreenSize, HostStatusInfo, HostMsg, HostScreenSnapshot } from '@shared/types'
+import type { DesktopWindow, DesktopScreenSize, DesktopAppEntry, HostStatusInfo, HostMsg, HostScreenSnapshot } from '@shared/types'
 
 /** 主机画面流 — 主进程 ximo-host-cam:// 协议代理（Bearer 鉴权在主进程内完成） */
 const STREAM_URL = 'ximo-host-cam://stream'
@@ -32,6 +32,7 @@ export function XimoOsDesktopPanel({ onClose }: { onClose: () => void }): React.
   const [typeText, setTypeText] = useState('')
   const [app, setApp] = useState('')
   const [clipboard, setClipboard] = useState('')
+  const [apps, setApps] = useState<DesktopAppEntry[]>([])
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -45,6 +46,13 @@ export function XimoOsDesktopPanel({ onClose }: { onClose: () => void }): React.
   const readClipboard = useCallback(async (): Promise<void> => {
     const res = await window.api.host.desktop('clipboard.read')
     setClipboard(res.ok ? String((res.data as { text?: string })?.text ?? '') : (res.error ?? '读取失败'))
+  }, [])
+
+  /** 拉取主机可启动应用清单 — 手动启动时也不必猜应用名 */
+  const loadApps = useCallback(async (): Promise<void> => {
+    const res = await window.api.host.desktop('app.available')
+    if (res.ok) setApps((res.data as DesktopAppEntry[]) ?? [])
+    else setNotice(res.error ?? '获取应用清单失败')
   }, [])
 
   useEffect(() => {
@@ -188,20 +196,44 @@ export function XimoOsDesktopPanel({ onClose }: { onClose: () => void }): React.
           <div className="flex w-60 shrink-0 flex-col gap-3 overflow-y-auto border-l border-border-subtle p-3">
             {/* 应用启动 */}
             <div>
-              <p className="mb-1.5 flex items-center gap-1 text-xs font-medium text-text-primary"><AppWindow size={12} className="text-accent" />启动应用</p>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="flex items-center gap-1 text-xs font-medium text-text-primary"><AppWindow size={12} className="text-accent" />启动应用</p>
+                <button
+                  onClick={() => void loadApps()}
+                  disabled={!connected}
+                  className="rounded-control border border-border-subtle px-1.5 py-0.5 text-caption text-text-secondary hover:border-accent/40 hover:text-accent disabled:opacity-40"
+                  title="列出主机上可启动的应用"
+                >{apps.length > 0 ? `清单(${apps.length})` : '查清单'}</button>
+              </div>
               <div className="flex gap-1">
                 <input
                   value={app}
                   onChange={(e) => setApp(e.target.value)}
                   placeholder="如 xfce4-terminal"
+                  list="ximo-host-apps"
                   className="min-w-0 flex-1 rounded-control border border-border-subtle bg-bg-input px-2 py-1 text-xs text-text-primary outline-none placeholder:text-text-quaternary focus:border-accent/40"
                 />
+                <datalist id="ximo-host-apps">
+                  {apps.map((a) => <option key={a.exec} value={a.exec}>{a.name}</option>)}
+                </datalist>
                 <button
                   onClick={() => { if (app.trim()) { void desktop('app.launch', { app: app.trim() }); setApp('') } }}
                   disabled={busy || !connected}
                   className="rounded-control bg-accent/15 px-2 text-accent hover:bg-accent/25 disabled:opacity-40"
                 ><Send size={12} /></button>
               </div>
+              {apps.length > 0 && (
+                <div className="mt-1.5 flex max-h-28 flex-wrap gap-1 overflow-y-auto">
+                  {apps.slice(0, 24).map((a) => (
+                    <button
+                      key={a.exec}
+                      onClick={() => setApp(a.exec)}
+                      title={a.comment || a.name}
+                      className="rounded-control border border-border-subtle px-1.5 py-0.5 text-caption text-text-secondary hover:border-accent/40 hover:text-accent"
+                    >{a.name}</button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 键盘注入 */}

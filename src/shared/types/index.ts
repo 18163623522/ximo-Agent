@@ -43,5 +43,5 @@ export type {
   TaskDoneMsg, ErrorMsg, PongMsg, RunnerEvent, TaskChunkDelta,
   HostTaskRecord, HostHealth, HostScreenSnapshot, HostStatus, HostStatusInfo,
   DesktopAction, DesktopRequestMsg, DesktopReplyMsg, DesktopEventMsg, DesktopWindow,
-  DesktopScreenSize
+  DesktopScreenSize, DesktopAppEntry
 } from './cockpit'
