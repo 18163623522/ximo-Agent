@@ -35,9 +35,11 @@ jobs:
       - name: 安装 mkosi 与 qemu
         run: |
           sudo apt-get update -qq
-          # systemd-ukify：mkosi 构建 bootable 磁盘镜像的必需工具（24.04 独立拆包）
-          # python3-pefile：ukify 的依赖
-          sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils systemd-ukify python3-pefile systemd-boot
+          sudo apt-get install -y -qq qemu-system-x86 qemu-utils python3-pip
+          # mkosi 25.3（pip）— noble 的 apt 版 24.3 工具树包清单用旧名 libtss2-mu0，
+          # noble 已 t64 改名导致安装失败；25.3 与 WSL trixie 验证版本一致
+          sudo python3 -m pip install --break-system-packages mkosi==25.3
+          mkosi --version
 
       - name: 构建 ximo-OS 0.1 磁盘镜像
         # root 运行 — Ubuntu 24.04 AppArmor 限制非特权 userns，mkosi 无根构建
