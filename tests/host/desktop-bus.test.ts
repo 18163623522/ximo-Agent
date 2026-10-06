@@ -161,6 +161,28 @@ describe('desktop-bus — 路由与解析', () => {
     await expect(bus.dispatch('window.list')).rejects.toThrow('未启用')
   })
 
+  it('active — xdotool 十进制 id 与 wmctrl 十六进制 id 归一化匹配（历史 bug）', async () => {
+    // 真实数据：xdotool getactivewindow → 25165836（十进制），wmctrl → 0x0180000c（十六进制）
+    const run: RunFn = async (cmd, args) => {
+      if (cmd === 'wmctrl') return '0x0180000c  0 4642 host 403 269 484 316 DEMO-APP\n'
+      if (cmd === 'xdotool' && args[0] === 'getactivewindow') return '25165836\n'
+      return ''
+    }
+    const bus = new DesktopBus({ display: ':99', run, appName: () => 'xterm' })
+    const active = await bus.dispatch('active') as DesktopWindow | null
+    expect(active).not.toBeNull()           // 此前恒为 null（id 格式不一致）
+    expect(active?.title).toBe('DEMO-APP')
+    expect(active?.id).toBe('0x0180000c')
+  })
+
+  it('window.op 接受十进制 window_id（归一化后定位）', async () => {
+    const f = fakeRun()
+    const bus = new DesktopBus(fakeDeps(f.run))
+    // 0x03c00007 = 62914567；传十进制也应命中 wmctrl 那条窗口
+    await bus.dispatch('window.op', { op: 'activate', window_id: '62914567' })
+    expect(f.calls.at(-1)).toEqual({ cmd: 'wmctrl', args: ['-i', '-a', '0x03c00007'] })
+  })
+
   it('鼠标注入 — click/scroll 命令参数正确（xdotool 键位编码）', async () => {
     const f = fakeRun()
     const bus = new DesktopBus(fakeDeps(f.run))

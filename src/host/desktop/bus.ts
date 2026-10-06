@@ -8,7 +8,7 @@
  * （server → desktop.reply 或 Agent 工具）转成 ok:false。
  */
 import type { DesktopAction, DesktopAppEntry, DesktopScreenSize, DesktopWindow } from '../../shared/types/cockpit'
-import { CMD, makeLauncher, makeRunner, mouseButtonCode, parseDesktopEntry, parseWmctrl, pidComm, scrollButtonCode, type RunFn } from './backend'
+import { CMD, makeLauncher, makeRunner, mouseButtonCode, normalizeWindowId, parseDesktopEntry, parseWmctrl, pidComm, scrollButtonCode, type RunFn } from './backend'
 
 export interface DesktopBusDeps {
   /** X 显示（Xvfb 会话）；空串 = 桌面功能停用 */
@@ -107,10 +107,13 @@ export class DesktopBus {
       case 'type':
         return this.runCmd(CMD.type(this.require(params, 'text')))
       case 'active': {
-        const id = (await this.runCmd(CMD.activeId())).trim()
+        // xdotool getactivewindow 输出**十进制**，而 wmctrl 输出十六进制（0x…）
+        // → 必须先归一化为十六进制再比对，否则永远匹配不到（历史 bug）
+        const raw = (await this.runCmd(CMD.activeId())).trim()
+        const id = normalizeWindowId(raw)
         if (!id) return null
         const windows = await this.listWindows()
-        return windows.find((w) => w.id === id) ?? null
+        return windows.find((w) => normalizeWindowId(w.id) === id) ?? null
       }
       case 'mouse.move':
         return this.runCmd(CMD.mouseMove(this.coord(params.x), this.coord(params.y)))
@@ -237,11 +240,19 @@ export class DesktopBus {
 
   /** 定位窗口 — window_id 优先，否则按标题子串查找 */
   private async resolveWindowId(params: Record<string, unknown>): Promise<string> {
-    const id = String(params.window_id ?? '')
-    if (id) return id
+    const raw = String(params.window_id ?? '')
+    const windows = await this.listWindows()
+    if (raw) {
+      // 归一化后匹配 — 调用方可能给十进制（xdotool 风格）或十六进制（wmctrl 风格）
+      const want = normalizeWindowId(raw)
+      const hit = windows.find((w) => normalizeWindowId(w.id) === want)
+      if (hit) return hit.id
+      // 归一化失败（如传入非数字串）时退化为原样透传，保留扩展可能
+      if (!want) return raw
+      throw new Error(`未找到窗口 id ${raw}（当前 ${windows.length} 个窗口）`)
+    }
     const title = String(params.title ?? '')
     if (!title) throw new Error('window.op 需要 window_id 或 title 参数')
-    const windows = await this.listWindows()
     const hit = windows.find((w) => w.title.includes(title))
     if (!hit) throw new Error(`未找到标题包含「${title}」的窗口`)
     return hit.id

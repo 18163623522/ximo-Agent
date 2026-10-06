@@ -132,6 +132,19 @@ export function parseDesktopEntry(raw: string): { exec: string; name: string; co
   return { exec: base, name: name || base, ...(comment ? { comment } : {}) }
 }
 
+/**
+ * 窗口 id 归一化为十六进制字符串（形如 0x0180000c）。
+ * 必要性：wmctrl 输出十六进制、xdotool 输出十进制，两者需统一比对，
+ * 否则 active 动作永远匹配不到窗口。
+ */
+export function normalizeWindowId(raw: string): string {
+  const s = raw.trim()
+  if (!s) return ''
+  const n = s.startsWith('0x') || s.startsWith('0X') ? parseInt(s, 16) : parseInt(s, 10)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  return `0x${n.toString(16).padStart(8, '0')}`
+}
+
 // ---------- 命令构建（集中在此，bus 不拼命令字符串） ----------
 
 export const CMD = {
