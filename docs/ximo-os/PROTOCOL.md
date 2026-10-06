@@ -48,6 +48,7 @@
 | `window.op` | `op` `window_id?` `title?` `x? y? w? h?` | `{ done: true }` |
 | `app.launch` | `app` `args?` | `{ pid }` |
 | `app.list` | — | `{ app, pid, windows: DesktopWindow[] }[]` |
+| `app.available` | — | `DesktopAppEntry[]`（`{ exec, name, comment? }`，扫 .desktop；Agent 据此选应用，勿猜名字） |
 | `key` | `keys`（如 "ctrl+s"） | `{ done: true }` |
 | `type` | `text` | `{ done: true }` |
 | `active` | — | `DesktopWindow \| null` |

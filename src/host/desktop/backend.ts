@@ -93,6 +93,45 @@ export function parseWmctrl(output: string): DesktopWindow[] {
   return windows
 }
 
+/**
+ * 解析 .desktop 条目 → 可启动应用。
+ * 取 [Desktop Entry] 段内 Name/Comment/Exec；Exec 去掉字段码（%U %f 等）并取首个词
+ * 作为命令名（app.launch 直接可用）。NoDisplay=true 与 Type≠Application 跳过。
+ */
+export function parseDesktopEntry(raw: string): { exec: string; name: string; comment?: string } | null {
+  let inEntry = false
+  let type = ''
+  let name = ''
+  let comment = ''
+  let exec = ''
+  let noDisplay = false
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('[')) {
+      inEntry = trimmed === '[Desktop Entry]'
+      continue
+    }
+    if (!inEntry || !trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    const key = trimmed.slice(0, eq).trim()
+    const value = trimmed.slice(eq + 1).trim()
+    switch (key) {
+      case 'Type': type = value; break
+      case 'Name': if (!name) name = value; break
+      case 'Comment': if (!comment) comment = value; break
+      case 'Exec': if (!exec) exec = value; break
+      case 'NoDisplay': noDisplay = value.toLowerCase() === 'true'; break
+    }
+  }
+  if (type !== 'Application' || noDisplay || !exec) return null
+  // 去掉字段码与参数，只留命令名（含路径时取 basename）
+  const cmd = exec.replace(/%[fFuUdDnNickvm]/g, '').trim().split(/\s+/)[0] ?? ''
+  if (!cmd) return null
+  const base = cmd.split('/').pop() ?? cmd
+  return { exec: base, name: name || base, ...(comment ? { comment } : {}) }
+}
+
 // ---------- 命令构建（集中在此，bus 不拼命令字符串） ----------
 
 export const CMD = {

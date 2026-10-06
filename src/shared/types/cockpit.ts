@@ -90,6 +90,7 @@ export type DesktopAction =
   | 'window.op'     // activate/close/move/resize/minimize/maximize/restore
   | 'app.launch'    // 启动应用（脱离会话常驻）
   | 'app.list'      // 运行中的应用（按进程聚合窗口）
+  | 'app.available' // 可启动的应用清单（扫描 .desktop 条目，避免猜应用名）
   | 'key'           // 按键（如 "ctrl+s"、"Return"）
   | 'type'          // 输入文本到聚焦窗口
   | 'active'        // 当前聚焦窗口
@@ -103,10 +104,18 @@ export type DesktopAction =
 
 /** 合法动作集合 — 协议校验用 */
 export const DESKTOP_ACTIONS: DesktopAction[] = [
-  'window.list', 'window.op', 'app.launch', 'app.list', 'key', 'type', 'active',
+  'window.list', 'window.op', 'app.launch', 'app.list', 'app.available', 'key', 'type', 'active',
   'mouse.move', 'mouse.click', 'mouse.scroll', 'screen.size',
   'clipboard.read', 'clipboard.write', 'screen.snapshot',
 ]
+
+/** 可启动应用条目 — app.available 的数据形态（来自 .desktop 条目） */
+export interface DesktopAppEntry {
+  /** 可执行命令名（app.launch 的 app 参数直接用这个） */
+  exec: string
+  name: string
+  comment?: string
+}
 
 /** 屏幕几何 — screen.size 响应 */
 export interface DesktopScreenSize {

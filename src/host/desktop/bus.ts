@@ -7,8 +7,8 @@
  * 错误语义：X 工具缺失 / 会话不可用 → 抛带归因的 Error，由调用方
  * （server → desktop.reply 或 Agent 工具）转成 ok:false。
  */
-import type { DesktopAction, DesktopScreenSize, DesktopWindow } from '../../shared/types/cockpit'
-import { CMD, makeLauncher, makeRunner, mouseButtonCode, parseWmctrl, pidComm, scrollButtonCode, type RunFn } from './backend'
+import type { DesktopAction, DesktopAppEntry, DesktopScreenSize, DesktopWindow } from '../../shared/types/cockpit'
+import { CMD, makeLauncher, makeRunner, mouseButtonCode, parseDesktopEntry, parseWmctrl, pidComm, scrollButtonCode, type RunFn } from './backend'
 
 export interface DesktopBusDeps {
   /** X 显示（Xvfb 会话）；空串 = 桌面功能停用 */
@@ -100,6 +100,8 @@ export class DesktopBus {
         return this.launchApp(String(params.app ?? ''), params.args)
       case 'app.list':
         return this.listApps()
+      case 'app.available':
+        return this.availableApps()
       case 'key':
         return this.runCmd(CMD.key(this.require(params, 'keys')))
       case 'type':
@@ -183,6 +185,32 @@ export class DesktopBus {
     const argList = Array.isArray(args) ? args.map(String) : []
     const { pid } = this.launchFn(app.trim(), argList)
     return pid ? { pid } : {}
+  }
+
+  /**
+   * 可启动应用清单 — 扫 /usr/share/applications 的 .desktop 条目。
+   * 让 Agent 不必猜应用名（猜错就是一次失败的 launch），这是纯 API 自动化的前提。
+   */
+  async availableApps(): Promise<DesktopAppEntry[]> {
+    const dirs = ['/usr/share/applications', '/usr/local/share/applications']
+    const entries: DesktopAppEntry[] = []
+    const seen = new Set<string>()
+    for (const dir of dirs) {
+      let listing: string
+      try {
+        listing = await this.runCmd({ cmd: 'ls', args: [dir] })
+      } catch { continue } // 目录不存在 → 跳过
+      for (const file of listing.split('\n').map((f) => f.trim()).filter((f) => f.endsWith('.desktop'))) {
+        try {
+          const raw = await this.runCmd({ cmd: 'cat', args: [`${dir}/${file}`] })
+          const entry = parseDesktopEntry(raw)
+          if (!entry || seen.has(entry.exec)) continue
+          seen.add(entry.exec)
+          entries.push(entry)
+        } catch { /* 单个条目读取失败不影响其余 */ }
+      }
+    }
+    return entries.sort((a, b) => a.name.localeCompare(b.name))
   }
 
   private async windowOp(params: Record<string, unknown>): Promise<{ done: boolean }> {

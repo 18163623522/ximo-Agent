@@ -199,6 +199,38 @@ describe('desktop-bus — 路由与解析', () => {
     expect(calls[1].stdin).toBe('待粘贴文本')
   })
 
+  it('app.available — 扫 .desktop 条目，解析出可直接 launch 的命令名', async () => {
+    const xterm = [
+      '[Desktop Entry]',
+      'Type=Application',
+      'Name=XTerm',
+      'Comment=standard terminal emulator',
+      'Exec=xterm -e %F',
+      'Icon=xterm',
+    ].join('\n')
+    // 无 Exec / NoDisplay / 非 Application 都应被剔除
+    const broken = '[Desktop Entry]\nType=Application\nName=Broken\n'
+    const hidden = '[Desktop Entry]\nType=Application\nName=Hidden\nExec=hidden-app %U\nNoDisplay=true\n'
+    const link = '[Desktop Entry]\nType=Link\nName=A link\nExec=nope\n'
+
+    const run: RunFn = async (cmd, args) => {
+      if (cmd === 'ls' && args[0] === '/usr/share/applications') return 'xterm.desktop\nbroken.desktop\nhidden.desktop\nlink.desktop\n'
+      if (cmd === 'ls') throw new Error('ENOENT') // 第二个目录不存在 → 跳过
+      if (cmd === 'cat') {
+        const f = args[0].split('/').pop()
+        if (f === 'xterm.desktop') return xterm
+        if (f === 'broken.desktop') return broken
+        if (f === 'hidden.desktop') return hidden
+        return link
+      }
+      return ''
+    }
+    const bus = new DesktopBus({ display: ':99', run })
+    const apps = await bus.dispatch('app.available') as { exec: string; name: string }[]
+    expect(apps).toHaveLength(1)
+    expect(apps[0]).toEqual({ exec: 'xterm', name: 'XTerm', comment: 'standard terminal emulator' })
+  })
+
   it('screen.snapshot — 兜底截图走注入的采集器；未注入时明确报错', async () => {
     const withShot = new DesktopBus(fakeDeps(fakeRun().run))
     // fakeDeps 未注入 snapshot → 明确的可读错误（而非静默失败）
