@@ -47,7 +47,12 @@ export interface TaskOutput {
 }
 
 /** 主机可移植工具域 — 与 lazy-registry 的模块组一一对应 */
-export const HOST_TOOL_GROUPS = ['file_system', 'terminal', 'git', 'web_intelligence', 'memory', 'skill', 'vision']
+export const HOST_TOOL_GROUPS = [
+  'file_system', 'terminal', 'git', 'web_intelligence', 'memory', 'skill', 'vision',
+  // 代码质量 — 主机默认 coding 模式，无此组则无法 lint/格式化/依赖检查/项目索引
+  // （全组零 electron import，纯 Node 可移植）
+  'code_quality', 'code_review',
+]
 
 const HOST_TOOL_NAMES = [
   // file_system
@@ -63,6 +68,11 @@ const HOST_TOOL_NAMES = [
   'skill_record', 'skill_invoke', 'agent_expert', 'create_tool',
   // vision — 配套 desktop 截图：Agent 截屏后据此理解画面内容
   'vision_analyze',
+  // code_quality — 代码执行/检查/格式化/依赖/项目上下文与索引
+  'code_execute', 'code_lint', 'code_format', 'dependency_check',
+  'project_context', 'project_index',
+  // code_review — 代码审查
+  'code_review',
 ]
 
 const ORIGINAL_CWD = process.cwd()

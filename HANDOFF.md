@@ -130,8 +130,12 @@ health 200 / WS 派任务 completed / 审批路径。
 ## 6. 未完成工作（优先级）
 
 - **P0-1**：镜像工件已产出（§5）→ 只剩 QEMU 引导的 5 项验收清单
-- **P1-1 阶段 2 剩余**：文档/浏览器两个 app 的语义化 JSON API；画面采集分辨率固定
-  1280x800（set_resolution 后需同步，ScreenCapture 构造参数）
+- **P1-1 阶段 2 剩余**：文档/浏览器两个 app 的语义化 JSON API（**主机侧无 pip、
+  无 soffice/pandoc/文档库**，需先定技术路径：随镜像打包 pip+python-docx/openpyxl，
+  或改用 LibreOffice headless）；浏览器侧主机无 playwright 浏览器
+- **已完成**：主机工具域已含 vision（截图→视觉分析闭环真机打通）与 code_quality/
+  code_review（主机默认 coding 模式此前缺代码智能）；分辨率已跟随（screen.ts 查
+  真实几何，变化即重启 ffmpeg）
 - **P1-3 人工接管**（先问用户）：cockpit 键鼠 → `input.*` 消息 → 镜像内注入
 - **P2-1 阶段 3**：btrfs 快照回滚、eBPF 审计、按任务用户沙箱、并发隔离（当前 runner
   chdir/写白名单是进程级全局，只能串行）
