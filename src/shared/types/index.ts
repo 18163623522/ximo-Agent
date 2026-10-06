@@ -41,6 +41,7 @@ export type {
   ClientMsg, HostMsg, TaskDispatchMsg, TaskCancelMsg, ApprovalRespondMsg, PingMsg,
   HelloMsg, TaskAcceptedMsg, TaskStatusMsg, TaskChunkMsg, ApprovalRequestMsg,
   TaskDoneMsg, ErrorMsg, PongMsg, RunnerEvent, TaskChunkDelta,
-  HostTaskRecord, HostHealth, HostStatus, HostStatusInfo,
-  DesktopAction, DesktopRequestMsg, DesktopReplyMsg, DesktopEventMsg, DesktopWindow
+  HostTaskRecord, HostHealth, HostScreenSnapshot, HostStatus, HostStatusInfo,
+  DesktopAction, DesktopRequestMsg, DesktopReplyMsg, DesktopEventMsg, DesktopWindow,
+  DesktopScreenSize
 } from './cockpit'

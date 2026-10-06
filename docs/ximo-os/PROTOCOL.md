@@ -51,6 +51,17 @@
 | `key` | `keys`（如 "ctrl+s"） | `{ done: true }` |
 | `type` | `text` | `{ done: true }` |
 | `active` | — | `DesktopWindow \| null` |
+| `mouse.move` | `x` `y` | `{}` |
+| `mouse.click` | `x` `y` `button?`（left/middle/right） | `{}` |
+| `mouse.scroll` | `x?` `y?` `direction`（up/down/left/right） `amount?` | `{}` |
+| `screen.size` | — | `{ width, height }`（交互坐标映射用） |
+
+### 桌面画面通道（v1，REST，Bearer 鉴权）
+
+| 端点 | 说明 |
+|---|---|
+| `GET /api/screen/stream` | ffmpeg MJPEG 实时画面流（`multipart/x-mixed-replace`）；驾驶舱经 `ximo-host-cam://` 协议代理给 `<img>` |
+| `GET /api/screen/snapshot` | 单帧截图 `{ ok, screenshot }`（base64 data URL）——画面流不可用时的兜底渲染源 |
 
 ## 3. 关键时序
 

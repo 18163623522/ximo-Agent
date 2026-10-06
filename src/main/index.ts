@@ -9,6 +9,7 @@ import { registerNetworkHandlers } from './ipc/network-handlers'
 import { registerDataHandlers } from './ipc/data-handlers'
 import { registerSystemHandlers } from './ipc/system-handlers'
 import { registerVoiceHandlers } from './voice/voice-ipc'
+import { registerXimoHostCamProtocol } from './host/cam-protocol'
 import { WSL_STREAM_URL, agentWorkspaceManager } from './tools/AgentWorkspace/AgentWorkspaceManager'
 // 内嵌浏览器 IPC 桥 — 模块加载时注册 handler，必须在启动时导入，
 // 否则用户打开内置浏览器时 'embedded-browser:set-active' 尚未注册导致报错
@@ -24,6 +25,8 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'ximobg', privileges: { bypassCSP: true, stream: true, supportFetchAPI: true } },
   // WSL 隔离桌面实时画面流（ffmpeg MJPEG 长连接分帧）— bypassCSP 绕过 img-src 限制
   { scheme: 'wslcam', privileges: { bypassCSP: true, stream: true, supportFetchAPI: true } },
+  // ximo-OS 主机画面流（同 wslcam 方案，数据源为远程主机的 /api/screen/stream）
+  { scheme: 'ximo-host-cam', privileges: { bypassCSP: true, stream: true, supportFetchAPI: true } },
 ])
 
 // ---------- 注册 IPC 处理器 ----------
@@ -73,6 +76,9 @@ app.whenReady().then(() => {
       return new Response('Agent 桌面画面流未就绪', { status: 503 })
     }
   })
+
+  // 注册 ximo-host-cam:// 协议处理器 — 代理 ximo-OS 主机画面流（渲染端之一）
+  registerXimoHostCamProtocol()
 
   createWindow()
 

@@ -8,8 +8,8 @@
  * 未显式传参时回退到已加载设置中的主机配置。
  */
 import { BrowserWindow, ipcMain } from 'electron'
-import { HostClient } from '@main/host/HostClient'
-import type { HostTaskRecord, HostStatusInfo, HostMsg } from '@shared/types'
+import { HostClient, restUrl } from '@main/host/HostClient'
+import type { HostTaskRecord, HostStatusInfo, HostMsg, DesktopAction } from '@shared/types'
 
 /** 向所有渲染窗口推送 — 字面量通道名，与 preload 订阅一一对应（IPC 契约测试对账） */
 function pushStatus(s: HostStatusInfo): void {
@@ -84,5 +84,25 @@ export function registerHostHandlers(): void {
   ipcMain.handle('host:tasks', async (): Promise<HostTaskRecord[]> => {
     if (!hostClient.isConnected()) return hostClient.getTasks()
     return hostClient.listTasks()
+  })
+
+  // ---------- 桌面渲染端（ximo-host-cam 画面流 + 纯 API 交互） ----------
+  ipcMain.handle('host:desktop', async (_event, action: DesktopAction, params?: Record<string, unknown>) => {
+    return hostClient.desktopRequest(action, params)
+  })
+
+  ipcMain.handle('host:screenSnapshot', async (): Promise<{ ok: boolean; screenshot?: string; error?: string }> => {
+    // 与连接复用同一套配置；一次性 REST 探测，不依赖当前 WS 连接
+    const cfg = await resolveConfig()
+    if (!cfg.url || !cfg.token) return { ok: false, error: '未配置主机' }
+    try {
+      const res = await fetch(`${restUrl(cfg.url, '')}/api/screen/snapshot`, {
+        headers: { Authorization: `Bearer ${cfg.token}` },
+      })
+      if (!res.ok) return { ok: false, error: `主机返回 ${res.status}` }
+      return (await res.json()) as { ok: boolean; screenshot?: string; error?: string }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
   })
 }

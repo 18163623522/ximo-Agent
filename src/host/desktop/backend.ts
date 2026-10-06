@@ -105,4 +105,31 @@ export const CMD = {
   /** 文本作为单个 execFile 参数 — 天然免疫空格/引号注入 */
   type: (text: string): { cmd: string; args: string[] } => ({ cmd: 'xdotool', args: ['type', '--delay', '15', '--', text] }),
   activeId: (): { cmd: string; args: string[] } => ({ cmd: 'xdotool', args: ['getactivewindow'] }),
+  // 键鼠注入 — 全部经 execFile 参数数组，坐标为数字强转
+  mouseMove: (x: number, y: number): { cmd: string; args: string[] } => ({ cmd: 'xdotool', args: ['mousemove', String(x), String(y)] }),
+  /** button: 1=左 2=中 3=右（xdotool 编码） */
+  mouseClick: (x: number, y: number, button: number): { cmd: string; args: string[] } =>
+    ({ cmd: 'xdotool', args: ['mousemove', String(x), String(y), 'click', String(button)] }),
+  /** 滚轮键位：4=上 5=下 6=左 7=右 */
+  mouseScroll: (x: number, y: number, amount: number, button: number): { cmd: string; args: string[] } =>
+    ({ cmd: 'xdotool', args: ['mousemove', String(x), String(y), 'click', '--repeat', String(amount), String(button)] }),
+  displayGeometry: (): { cmd: string; args: string[] } => ({ cmd: 'xdotool', args: ['getdisplaygeometry'] }),
 } as const
+
+/** xdotool 鼠标按键编码 — 'left'|'middle'|'right' → 1|2|3；滚轮方向 → 4/5/6/7 */
+export function mouseButtonCode(button: string): number {
+  switch (button) {
+    case 'middle': return 2
+    case 'right': return 3
+    default: return 1
+  }
+}
+
+export function scrollButtonCode(direction: string): number {
+  switch (direction) {
+    case 'up': return 4
+    case 'down': return 5
+    case 'left': return 6
+    default: return 7
+  }
+}

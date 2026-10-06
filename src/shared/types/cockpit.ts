@@ -93,11 +93,22 @@ export type DesktopAction =
   | 'key'           // 按键（如 "ctrl+s"、"Return"）
   | 'type'          // 输入文本到聚焦窗口
   | 'active'        // 当前聚焦窗口
+  | 'mouse.move'    // 移动鼠标（x,y）
+  | 'mouse.click'   // 点击（x,y,button）
+  | 'mouse.scroll'  // 滚动（direction: up/down/left/right, amount）
+  | 'screen.size'   // 屏幕几何（width/height，交互坐标映射用）
 
 /** 合法动作集合 — 协议校验用 */
 export const DESKTOP_ACTIONS: DesktopAction[] = [
   'window.list', 'window.op', 'app.launch', 'app.list', 'key', 'type', 'active',
+  'mouse.move', 'mouse.click', 'mouse.scroll', 'screen.size',
 ]
+
+/** 屏幕几何 — screen.size 响应 */
+export interface DesktopScreenSize {
+  width: number
+  height: number
+}
 
 export interface DesktopRequestMsg {
   t: 'desktop.request'
@@ -155,6 +166,13 @@ export interface HostHealth {
   name?: string
   version?: number
   mode?: string
+  error?: string
+}
+
+/** GET /api/screen/snapshot 响应 — 画面流不可用时的兜底渲染源 */
+export interface HostScreenSnapshot {
+  ok: boolean
+  screenshot?: string
   error?: string
 }
 

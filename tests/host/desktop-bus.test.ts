@@ -12,8 +12,9 @@ import { mkdirSync } from 'fs'
 import { DesktopBus } from '../../src/host/desktop/bus'
 import { parseWmctrl } from '../../src/host/desktop/backend'
 import { createHostServer, HostServer } from '../../src/host/server'
+import type { ScreenCapture } from '../../src/host/desktop/screen'
 import { HostClient } from '../../src/main/host/HostClient'
-import type { HostStatusInfo, HostMsg, HostTaskRecord, DesktopWindow } from '../../src/shared/types'
+import type { HostStatusInfo, HostMsg, HostTaskRecord, DesktopWindow, DesktopScreenSize } from '../../src/shared/types'
 
 // ---------- electron mock（server → task-runner 链需要） ----------
 
@@ -159,6 +160,26 @@ describe('desktop-bus — 路由与解析', () => {
     await expect(bus.dispatch('window.list')).rejects.toThrow('未启用')
   })
 
+  it('鼠标注入 — click/scroll 命令参数正确（xdotool 键位编码）', async () => {
+    const f = fakeRun()
+    const bus = new DesktopBus(fakeDeps(f.run))
+    await bus.dispatch('mouse.click', { x: 120, y: 80, button: 'right' })
+    expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '120', '80', 'click', '3'] })
+    await bus.dispatch('mouse.scroll', { x: 10, y: 20, direction: 'up', amount: 3 })
+    expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '10', '20', 'click', '--repeat', '3', '4'] })
+    await bus.dispatch('mouse.move', { x: 55.7, y: 'abc' })
+    expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '56', '0'] }) // 强转取整；NaN → 0
+  })
+
+  it('screen.size — 解析 getdisplaygeometry 输出', async () => {
+    const f = fakeRun()
+    f.run.mockImplementation(async (cmd: string, args: string[]): Promise<string> =>
+      cmd === 'xdotool' && args[0] === 'getdisplaygeometry' ? '1280 800' : '')
+    const bus = new DesktopBus(fakeDeps(f.run as never))
+    const size = await bus.dispatch('screen.size') as DesktopScreenSize
+    expect(size).toEqual({ width: 1280, height: 800 })
+  })
+
   it('事件轮询 — 窗口集合变化即推完整快照', async () => {
     let out = WMCTRL_OUT
     const f = fakeRun()
@@ -235,5 +256,36 @@ describe('desktop-bus — 协议回路（真 server + 真 HostClient）', () => 
     const res = await client.desktopRequest('window.op', { window_id: '0x03c00007' })
     expect(res.ok).toBe(false)
     expect(res.error).toContain('op ∈')
+  })
+
+  it('屏幕端点 — 快照/画面流均要求 Bearer 鉴权，快照走注入的采集器', { timeout: 20_000 }, async () => {
+    const f = fakeRun()
+    const fakeScreen = {
+      snapshot: async (): Promise<string | null> => 'data:image/png;base64,AAAA',
+      ensureStream: async (): Promise<void> => {},
+      upstreamUrl: 'http://127.0.0.1:1/stream', // 无人监听 → 流 503 路径
+    }
+    const server = createHostServer({
+      config: { listen: '127.0.0.1:18123', display: ':99' },
+      token: TOKEN,
+      deps: { desktopBus: new DesktopBus(fakeDeps(f.run)), screen: fakeScreen as unknown as ScreenCapture },
+    })
+    await server.start()
+    servers.push(server)
+    const base = 'http://127.0.0.1:18123'
+
+    const noAuth = await fetch(`${base}/api/screen/snapshot`)
+    expect(noAuth.status).toBe(401)
+    const noAuthStream = await fetch(`${base}/api/screen/stream`)
+    expect(noAuthStream.status).toBe(401)
+
+    const authed = await fetch(`${base}/api/screen/snapshot`, { headers: { Authorization: `Bearer ${TOKEN}` } })
+    expect(authed.status).toBe(200)
+    const body = (await authed.json()) as { ok: boolean; screenshot?: string }
+    expect(body.ok).toBe(true)
+    expect(body.screenshot).toContain('data:image/png')
+
+    const deadStream = await fetch(`${base}/api/screen/stream`, { headers: { Authorization: `Bearer ${TOKEN}` } })
+    expect(deadStream.status).toBe(503) // 上游无人监听 → 画面流未就绪
   })
 })

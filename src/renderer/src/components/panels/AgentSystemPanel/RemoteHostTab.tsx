@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
   Loader2, CheckCircle2, XCircle, Square, Radio, PlugZap, Plug,
-  Send, ChevronRight, Server, ShieldAlert, Wallet,
+  Send, ChevronRight, Server, ShieldAlert, Wallet, MonitorPlay,
 } from 'lucide-react'
 import type { HostTaskRecord, HostStatusInfo, HostMsg } from '@shared/types'
 import { useStore } from '@renderer/store/useStore'
+import { XimoOsDesktopPanel } from './XimoOsDesktopPanel'
 
 /** 审批待办 — 主机侧 ask 类操作征求同意（fail-closed：超时=拒绝） */
 interface PendingApproval {
@@ -51,6 +52,7 @@ export function RemoteHostTab(): React.ReactElement {
   const [selected, setSelected] = useState<string | null>(null)
   const [approval, setApproval] = useState<PendingApproval | null>(null)
   const [dispatching, setDispatching] = useState(false)
+  const [showDesktop, setShowDesktop] = useState(false)
 
   useEffect(() => {
     void window.api.host.status().then(setStatus)
@@ -148,7 +150,17 @@ export function RemoteHostTab(): React.ReactElement {
               {conn.label}
             </span>
           </div>
-          {status.status === 'connected' ? (
+          <div className="flex items-center gap-1">
+            {status.status === 'connected' && (
+              <button
+                onClick={() => setShowDesktop(true)}
+                className="flex items-center gap-1 rounded-control bg-accent/15 px-2 py-1 text-xs text-accent hover:bg-accent/25"
+                title="打开 ximo-OS 桌面（画面流 + 纯 API 交互）"
+              >
+                <MonitorPlay size={11} />打开桌面
+              </button>
+            )}
+            {status.status === 'connected' ? (
             <button
               onClick={() => void handleDisconnect()}
               className="flex items-center gap-1 rounded-control px-2 py-1 text-xs text-text-muted hover:text-state-error"
@@ -164,6 +176,7 @@ export function RemoteHostTab(): React.ReactElement {
               <PlugZap size={11} />连接
             </button>
           )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -329,6 +342,9 @@ export function RemoteHostTab(): React.ReactElement {
         <Wallet size={10} />
         任务在主机侧独立执行，不占用本地会话；审批超时 120s 自动拒绝（fail-closed）
       </p>
+
+      {/* ximo-OS 桌面渲染端 — 画面流 + 纯 API 交互 */}
+      {showDesktop && <XimoOsDesktopPanel onClose={() => setShowDesktop(false)} />}
     </div>
   )
 }

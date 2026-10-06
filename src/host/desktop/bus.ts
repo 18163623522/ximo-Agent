@@ -7,8 +7,8 @@
  * 错误语义：X 工具缺失 / 会话不可用 → 抛带归因的 Error，由调用方
  * （server → desktop.reply 或 Agent 工具）转成 ok:false。
  */
-import type { DesktopAction, DesktopWindow } from '../../shared/types/cockpit'
-import { CMD, makeLauncher, makeRunner, parseWmctrl, pidComm, type RunFn } from './backend'
+import type { DesktopAction, DesktopScreenSize, DesktopWindow } from '../../shared/types/cockpit'
+import { CMD, makeLauncher, makeRunner, mouseButtonCode, parseWmctrl, pidComm, scrollButtonCode, type RunFn } from './backend'
 
 export interface DesktopBusDeps {
   /** X 显示（Xvfb 会话）；空串 = 桌面功能停用 */
@@ -108,6 +108,25 @@ export class DesktopBus {
         const windows = await this.listWindows()
         return windows.find((w) => w.id === id) ?? null
       }
+      case 'mouse.move':
+        return this.runCmd(CMD.mouseMove(this.coord(params.x), this.coord(params.y)))
+      case 'mouse.click': {
+        const btn = mouseButtonCode(String(params.button ?? 'left'))
+        return this.runCmd(CMD.mouseClick(this.coord(params.x), this.coord(params.y), btn))
+      }
+      case 'mouse.scroll': {
+        const dir = String(params.direction ?? 'down')
+        const amount = Math.max(1, Math.min(10, Number(params.amount ?? 3)))
+        const btn = scrollButtonCode(dir)
+        return this.runCmd(CMD.mouseScroll(this.coord(params.x ?? -1), this.coord(params.y ?? -1), amount, btn))
+      }
+      case 'screen.size': {
+        // 输出形如 "1280 800"
+        const out = (await this.runCmd(CMD.displayGeometry())).trim().split(/\s+/)
+        const size: DesktopScreenSize = { width: Number(out[0]) || 0, height: Number(out[1]) || 0 }
+        if (!size.width || !size.height) throw new Error('无法读取屏幕几何')
+        return size
+      }
       default:
         throw new Error(`未知的桌面操作: ${String(action)}`)
     }
@@ -188,6 +207,12 @@ export class DesktopBus {
     const v = String(params[key] ?? '')
     if (!v) throw new Error(`${key} 参数必填`)
     return v
+  }
+
+  /** 坐标强转 — 非数字退到 0（xdotool 不接受非数字） */
+  private coord(v: unknown): number {
+    const n = Number(v)
+    return Number.isFinite(n) ? Math.round(n) : 0
   }
 
   private async runCmd({ cmd, args }: { cmd: string; args: string[] }): Promise<string> {

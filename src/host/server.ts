@@ -14,6 +14,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 import { parseClientMsg, HOST_VERSION, HostMsg } from './protocol'
 import { runTask } from './agent/task-runner'
 import { DesktopBus } from './desktop/bus'
+import { ScreenCapture } from './desktop/screen'
 import { HostConfig, loadConfig, tasksDir, workspaceDir, ensureToken } from './config'
 import type { HostTaskRecord, RunnerEvent } from '../shared/types/cockpit'
 
@@ -25,6 +26,8 @@ export interface HostDeps {
   approvalTimeoutMs?: number
   /** 注入 desktop-bus（测试用 fake 后端）；缺省按 config.display 自建 */
   desktopBus?: DesktopBus
+  /** 注入画面采集（测试用 fake）；缺省按 config.display 自建 */
+  screen?: ScreenCapture
 }
 
 export interface HostServer {
@@ -51,6 +54,9 @@ export function createHostServer(opts?: {
   // desktop-bus — 桌面 API 总线（阶段 2）；注入优先，否则按 config.display 自建
   const desktopBus = opts?.deps?.desktopBus ?? new DesktopBus({ display: config.display })
   desktopBus.onEvent((e) => broadcast({ t: 'desktop.event', kind: e.kind, data: e.data }))
+
+  // 画面采集 — 渲染端数据源（/api/screen/stream 代理 + snapshot 兜底）
+  const screen = opts?.deps?.screen ?? new ScreenCapture({ display: config.display })
 
   const broadcast = (msg: HostMsg): void => {
     const raw = JSON.stringify(msg)
@@ -143,7 +149,7 @@ export function createHostServer(opts?: {
     }
   }
 
-  const httpServer = createServer((req, res) => {
+  const httpServer = createServer(async (req, res) => {
     const authed = req.headers.authorization === `Bearer ${token}`
     const json = (code: number, body: unknown): void => {
       res.writeHead(code, { 'Content-Type': 'application/json' })
@@ -161,6 +167,33 @@ export function createHostServer(opts?: {
         try { return JSON.parse(readFileSync(join(tasksDir(), f), 'utf-8')) as TaskRecord } catch { return null }
       }).filter(Boolean)
       return json(200, { ok: true, tasks: [...live, ...past] })
+    }
+    if (req.url === '/api/screen/snapshot') {
+      if (!authed) return json(401, { ok: false, error: '需要 Bearer 令牌' })
+      const shot = await screen.snapshot()
+      return json(200, shot ? { ok: true, screenshot: shot } : { ok: false, error: '截图失败（桌面会话未就绪）' })
+    }
+    if (req.url === '/api/screen/stream') {
+      if (!authed) {
+        res.writeHead(401, { 'Content-Type': 'text/plain' })
+        res.end('需要 Bearer 令牌')
+        return
+      }
+      try {
+        await screen.ensureStream()
+        const upstream = await fetch(screen.upstreamUrl)
+        // ffmpeg 恒发 application/octet-stream — Chromium <img> 只认 multipart 才逐帧渲染
+        res.writeHead(200, {
+          'Content-Type': 'multipart/x-mixed-replace; boundary=ffmpeg',
+          'Cache-Control': 'no-store',
+        })
+        const { Readable } = await import('stream')
+        Readable.fromWeb(upstream.body as import('stream/web').ReadableStream).pipe(res)
+      } catch (e) {
+        res.writeHead(503, { 'Content-Type': 'text/plain' })
+        res.end(`画面流未就绪: ${(e as Error).message.slice(0, 200)}`)
+      }
+      return
     }
     json(404, { ok: false, error: 'not found' })
   })

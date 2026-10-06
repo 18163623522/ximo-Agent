@@ -128,9 +128,12 @@ agent-hostd（Linux 用户态守护进程，Node 单文件 dist-host/agent-hostd
   task-runner 按总线可用性注册，Permission.ts 全量 allow）——驾驶舱（HostClient.
   desktopRequest）与主机 Agent 是同一总线的同等客户端。总线依赖主机侧 Xvfb
   （config.display，默认 :99，XIMO_HOST_DISPLAY 可覆盖，空 = 停用）
-- **待做**：驾驶舱桌面面板（window.list/app.launch UI；事件经 host:event 已可透传）、
-  画面流移植（wslcam:// 的 ffmpeg MJPEG 方案进镜像/主机）、文档/浏览器 app 的
-  语义化 JSON API
+- **待做**：文档/浏览器 app 的语义化 JSON API；画面采集分辨率当前固定 1280x800
+  （ScreenCapture 构造参数，set_resolution 后需同步）
+- **渲染端已完成（2026-10-06 会话）**：`XimoOsDesktopPanel`（Agent 系统 → 远程主机 →
+  「打开桌面」）——主机 ffmpeg 画面流经 `ximo-host-cam://` 协议代理（cam-protocol.ts），
+  快照兜底（/api/screen/snapshot，2s 轮询），窗口树点击激活、应用启动、按键/文本注入、
+  画布点击/滚轮坐标映射（desktop-bus mouse.* / screen.size，协议已扩展）
 - **验收**：同一办公任务纯 API 零截图完成（这是阶段 2 的灵魂指标）
 
 ### P1-2 视觉回路（✅ 已完成，2026-10-06 会话——走留存路径而非 image_url 直传）

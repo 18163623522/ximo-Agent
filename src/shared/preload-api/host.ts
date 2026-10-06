@@ -7,7 +7,7 @@
  */
 
 import { ipcRenderer } from 'electron'
-import type { HostTaskRecord, HostHealth, HostStatusInfo, HostMsg } from '@shared/types'
+import type { HostTaskRecord, HostHealth, HostStatusInfo, HostMsg, DesktopAction, DesktopScreenSize, HostScreenSnapshot } from '@shared/types'
 
 export const hostApi = {
   host: {
@@ -28,6 +28,16 @@ export const hostApi = {
       ipcRenderer.invoke('host:approvalRespond', reqId, allow),
     /** 任务列表 — 已连接时走 REST 合并历史，否则返回本地实时视图 */
     listTasks: (): Promise<HostTaskRecord[]> => ipcRenderer.invoke('host:tasks'),
+
+    /** desktop-bus 调用 — 窗口/应用/键鼠/屏幕几何（阶段 2 渲染端交互通道） */
+    desktop: (action: DesktopAction, params?: Record<string, unknown>): Promise<{ ok: boolean; data?: unknown; error?: string }> =>
+      ipcRenderer.invoke('host:desktop', action, params),
+    /** 单帧截图 — 画面流不可用时的兜底 */
+    screenSnapshot: (): Promise<HostScreenSnapshot> => ipcRenderer.invoke('host:screenSnapshot'),
+    /** 屏幕几何（类型别名，数据经 desktop('screen.size') 取得） */
+    screenSize: (): Promise<DesktopScreenSize | null> =>
+      ipcRenderer.invoke('host:desktop', 'screen.size').then((r: { ok: boolean; data?: unknown }) =>
+        r.ok ? (r.data as DesktopScreenSize) : null),
 
     /** 连接状态推送 */
     onStatus: (callback: (s: HostStatusInfo) => void): (() => void) => {
