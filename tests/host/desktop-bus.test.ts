@@ -10,9 +10,9 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { mkdirSync } from 'fs'
 import { DesktopBus } from '../../src/host/desktop/bus'
-import { parseWmctrl } from '../../src/host/desktop/backend'
+import { parseWmctrl, type RunFn } from '../../src/host/desktop/backend'
 import { createHostServer, HostServer } from '../../src/host/server'
-import type { ScreenCapture } from '../../src/host/desktop/screen'
+import { ScreenCapture } from '../../src/host/desktop/screen'
 import { HostClient } from '../../src/main/host/HostClient'
 import type { HostStatusInfo, HostMsg, HostTaskRecord, DesktopWindow, DesktopScreenSize } from '../../src/shared/types'
 
@@ -178,6 +178,37 @@ describe('desktop-bus — 路由与解析', () => {
     const bus = new DesktopBus(fakeDeps(f.run as never))
     const size = await bus.dispatch('screen.size') as DesktopScreenSize
     expect(size).toEqual({ width: 1280, height: 800 })
+  })
+
+  it('画面采集跟随分辨率 — 尺寸变化时重启 ffmpeg（否则画面被裁切）', async () => {
+    let geom = '1280 800'
+    let ffmpegAlive = false
+    const calls: string[] = []
+    const run: RunFn = async (cmd, args) => {
+      calls.push(`${cmd} ${args.join(' ')}`)
+      if (cmd === 'pgrep') return ffmpegAlive ? '123\n' : ''
+      if (cmd === 'pkill') { ffmpegAlive = false; return '' }
+      if (cmd === 'xdotool') return geom
+      if (cmd === 'bash') { ffmpegAlive = true; return 'OK' }
+      return ''
+    }
+    const cap = new ScreenCapture({ display: ':99', run })
+
+    await cap.ensureStream()
+    expect(calls.some((c) => c.includes('-video_size 1280x800'))).toBe(true)
+    const startsAfterFirst = calls.filter((c) => c.startsWith('bash ')).length
+
+    // 同一尺寸再次 ensure → 复用现有流，不重启
+    await cap.ensureStream()
+    expect(calls.filter((c) => c.startsWith('bash ')).length).toBe(startsAfterFirst)
+
+    // 分辨率改变 → 必须杀旧流并以新尺寸重启
+    geom = '1920 1080'
+    await cap.ensureStream()
+    const bashCalls = calls.filter((c) => c.startsWith('bash '))
+    expect(bashCalls.length).toBe(startsAfterFirst + 1)
+    expect(bashCalls.at(-1)).toContain('-video_size 1920x1080')
+    expect(calls.some((c) => c.startsWith('pkill '))).toBe(true)
   })
 
   it('事件轮询 — 窗口集合变化即推完整快照', async () => {
