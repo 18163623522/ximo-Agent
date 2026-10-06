@@ -26,8 +26,16 @@ function fmtWindow(w: DesktopWindow): string {
 
 /** 结果转 LLM 可读文本 — 列表类格式化为行，其余紧凑 JSON */
 function formatData(data: unknown): string {
-  if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object' && 'id' in (data[0] as object)) {
-    return (data as DesktopWindow[]).map(fmtWindow).join('\n')
+  if (Array.isArray(data) && data.length > 0) {
+    const first = data[0] as Record<string, unknown>
+    // 窗口列表
+    if ('id' in first) return (data as DesktopWindow[]).map(fmtWindow).join('\n')
+    // 可启动应用清单 — 一应用一行，避免 JSON 噪声
+    if ('exec' in first) {
+      return (data as { exec: string; name: string; comment?: string }[])
+        .map((a) => `- ${a.exec}  (${a.name}${a.comment ? ` — ${a.comment}` : ''})`)
+        .join('\n')
+    }
   }
   if (Array.isArray(data) && data.length === 0) return '（空）'
   return JSON.stringify(data)

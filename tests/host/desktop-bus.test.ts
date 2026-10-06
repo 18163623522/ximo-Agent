@@ -13,6 +13,7 @@ import { DesktopBus } from '../../src/host/desktop/bus'
 import { parseWmctrl, type RunFn } from '../../src/host/desktop/backend'
 import { createHostServer, HostServer } from '../../src/host/server'
 import { ScreenCapture } from '../../src/host/desktop/screen'
+import { DesktopBusTool } from '../../src/host/tools/desktop-tool'
 import { HostClient } from '../../src/main/host/HostClient'
 import type { HostStatusInfo, HostMsg, HostTaskRecord, DesktopWindow, DesktopScreenSize } from '../../src/shared/types'
 
@@ -229,6 +230,23 @@ describe('desktop-bus — 路由与解析', () => {
     const apps = await bus.dispatch('app.available') as { exec: string; name: string }[]
     expect(apps).toHaveLength(1)
     expect(apps[0]).toEqual({ exec: 'xterm', name: 'XTerm', comment: 'standard terminal emulator' })
+  })
+
+  it('desktop 工具把应用清单格式化为行（不是原始 JSON，对 LLM 友好）', async () => {
+    const tool = new DesktopBusTool(new DesktopBus({
+      display: ':99',
+      run: async (cmd, args) => {
+        if (cmd === 'ls') return args[0] === '/usr/share/applications' ? 'xterm.desktop\n' : (() => { throw new Error('ENOENT') })()
+        if (cmd === 'cat') return '[Desktop Entry]\nType=Application\nName=XTerm\nComment=terminal emulator\nExec=xterm %F\n'
+        return ''
+      },
+    }))
+    const res = await tool.execute({ id: 'tc1', name: 'desktop', arguments: { action: 'app.available' } })
+    expect(res.success).toBe(true)
+    expect(res.content).toContain('- xterm')
+    expect(res.content).toContain('XTerm')
+    expect(res.content).toContain('terminal emulator')
+    expect(res.content.startsWith('[')).toBe(false) // 不是 JSON 数组
   })
 
   it('screen.snapshot — 兜底截图走注入的采集器；未注入时明确报错', async () => {
