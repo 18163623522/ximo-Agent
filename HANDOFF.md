@@ -36,7 +36,7 @@
 | VT-x | **BIOS 开不了**（HypervisorPresent=False）→ WSL2/Hyper-V/KVM 永久不可用 |
 | 磁盘 | C 盘已清理（约 27GB 可用）；E 盘约 50GB |
 | 本机部署 | agent-hostd 已部署在 WSL1：`/root/ximo-host/`（单文件产物 + 官方 node v20.19.2 + config） |
-| 运行状态 | **默认未运行**（WSL1 会话结束进程即被清，见下） |
+**运行状态** | **已常驻运行**（2026-10-06 起）：Windows 任务计划 `ximo-hostd`（登录时 `wsl -d Debian -- /root/ximo-host/ximo-host run` 保活）；v1 构建（含 desktop-bus + 画面端点）；apiKey 已配置（源自旧版 dev settings 的明文密钥，API 实测 200）；**E2E 冒烟通过**（WS 派任务 → `链路正常`，1.1s）。注意：进程名是 `dist-host/agent-hostd.cjs`，手杀用 `pkill -f 'agent-hostd[.]cjs'`（`ximo-hos[t].cjs` 模式匹配不到）；git 推送需 `git -c http.proxy= -c https.proxy= push`（本机 12450 代理已失效）
 
 **WSL1 三大坑（代码/脚本已绕过，但你写新命令时会撞上）**：
 1. Git Bash 调 `wsl.exe` 时 `/root/...` 会被 MSYS 转换成 Windows 路径 →
