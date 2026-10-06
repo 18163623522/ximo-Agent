@@ -35,7 +35,9 @@ jobs:
       - name: 安装 mkosi 与 qemu
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils
+          # systemd-ukify：mkosi 构建 bootable 磁盘镜像的必需工具（24.04 独立拆包）
+          # python3-pefile：ukify 的依赖
+          sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils systemd-ukify python3-pefile
 
       - name: 构建 ximo-OS 0.1 磁盘镜像
         # root 运行 — Ubuntu 24.04 AppArmor 限制非特权 userns，mkosi 无根构建
