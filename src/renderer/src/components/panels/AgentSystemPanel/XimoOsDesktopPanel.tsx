@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   X, Server, MousePointerClick, RefreshCw, Send, Loader2, Radio,
-  AppWindow, Keyboard, ChevronRight,
+  AppWindow, Keyboard, ChevronRight, ClipboardPaste,
 } from 'lucide-react'
 import type { DesktopWindow, DesktopScreenSize, HostStatusInfo, HostMsg, HostScreenSnapshot } from '@shared/types'
 
@@ -31,6 +31,7 @@ export function XimoOsDesktopPanel({ onClose }: { onClose: () => void }): React.
   const [keys, setKeys] = useState('')
   const [typeText, setTypeText] = useState('')
   const [app, setApp] = useState('')
+  const [clipboard, setClipboard] = useState('')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -38,6 +39,12 @@ export function XimoOsDesktopPanel({ onClose }: { onClose: () => void }): React.
   const refreshWindows = useCallback(async (): Promise<void> => {
     const res = await window.api.host.desktop('window.list')
     if (res.ok) setWindows((res.data as DesktopWindow[]) ?? [])
+  }, [])
+
+  /** 读主机剪贴板 — 查看桌面内应用内容的最快方式（无需截图/视觉模型） */
+  const readClipboard = useCallback(async (): Promise<void> => {
+    const res = await window.api.host.desktop('clipboard.read')
+    setClipboard(res.ok ? String((res.data as { text?: string })?.text ?? '') : (res.error ?? '读取失败'))
   }, [])
 
   useEffect(() => {
@@ -223,6 +230,36 @@ export function XimoOsDesktopPanel({ onClose }: { onClose: () => void }): React.
                 disabled={busy || !connected || !typeText}
                 className="mt-1 w-full rounded-control bg-accent/15 py-1 text-xs text-accent hover:bg-accent/25 disabled:opacity-40"
               >打入文本</button>
+            </div>
+
+            {/* 剪贴板 — 查看/注入主机桌面内容（比截图快的纯 API 通路） */}
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="flex items-center gap-1 text-xs font-medium text-text-primary">
+                  <ClipboardPaste size={12} className="text-accent" />剪贴板
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => void readClipboard()}
+                    disabled={!connected}
+                    className="rounded-control border border-border-subtle px-1.5 py-0.5 text-caption text-text-secondary hover:border-accent/40 hover:text-accent disabled:opacity-40"
+                    title="读取主机剪贴板"
+                  >读取</button>
+                  <button
+                    onClick={() => { if (clipboard) void desktop('clipboard.write', { text: clipboard }) }}
+                    disabled={busy || !connected || !clipboard}
+                    className="rounded-control border border-border-subtle px-1.5 py-0.5 text-caption text-text-secondary hover:border-accent/40 hover:text-accent disabled:opacity-40"
+                    title="把下方文本写入主机剪贴板（随后可按 ctrl+v 粘贴）"
+                  >写入</button>
+                </div>
+              </div>
+              <textarea
+                value={clipboard}
+                onChange={(e) => setClipboard(e.target.value)}
+                placeholder="点「读取」拉取主机剪贴板内容"
+                rows={2}
+                className="w-full resize-none rounded-control border border-border-subtle bg-bg-input px-2 py-1 text-xs text-text-primary outline-none placeholder:text-text-quaternary focus:border-accent/40"
+              />
             </div>
 
             {/* 窗口树 */}

@@ -99,31 +99,33 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 6. **测试基线**：46 文件 / 856+ 用例全绿（新增 host-client 12 例、desktop-bus 14 例、
    视觉回路 4 例）；typecheck 0 错误；host:build 通过
 
-## 5. 唯一进行中：CI 镜像构建（P0-1，第 16 轮）
+## 5. 阶段 1 镜像构建：✅ 已成功（run 20，2026-10-06）
 
-**已连续排除 8 个问题**（每个都实测过，别再踩）：
-① AppArmor 禁非特权 userns → `sudo -E bash build-image.sh`（root 构建）
-② 缺 ukify → noble 包名 `systemd-ukify`
-③ 缺 bootctl → noble 包名 `systemd-boot`
-④ PyPI 无 mkosi → 从 Debian 池取 deb
-⑤ noble apt 版 mkosi 24.3 工具树包名不兼容 t64（libtss2-mu0 已改名）→ 用 trixie 的
-   `mkosi_25.3-7_all.deb`（注意 -7 后缀，-1 是 404）
-⑥ `ToolsTree=yes` 在 25.3 已废弃（"yes does not exist"）
-⑦ GITHUB_PATH/GITHUB_ENV **同步骤不生效**；sudo 会剥离 PYTHONPATH →
-   解包 + `/usr/local/bin/mkosi` 包装脚本（自带 PYTHONPATH，root 可见）——已验证可行
-⑧ mkosi deb 依赖无法在 noble 解析 → **不要** `apt-get install /tmp/mkosi.deb`
+**20 轮 CI 排掉 10 个环境问题**（全部实测，接手勿重走）：
+① AppArmor 禁非特权 userns → root 构建（`sudo -E bash build-image.sh`）
+② ukify 缺失 → 宿主装 `systemd-ukify`
+③ bootctl 缺失 → 宿主装 `systemd-boot`
+④ PyPI 无 mkosi → 取 Debian 池 deb（文件名是 `mkosi_25.3-7_all.deb`，`-1` 是 404）
+⑤ noble apt 版 mkosi 24.3 工具树包名不兼容 t64 → 用 trixie 的 25.3
+⑥ `ToolsTree=yes/default` 在 25.3 已废弃（只接受目录路径，给布尔值报 "X does not exist"）
+   → 移除该配置，走宿主工具
+⑦ GITHUB_PATH/GITHUB_ENV 同步骤不生效 + sudo 剥离 PYTHONPATH →
+   解包 mkosi + `/usr/local/bin/mkosi` 包装脚本（自带 PYTHONPATH）
+⑧ mkosi deb 依赖无法在 noble 解析 → **不要** apt install 该 deb，用解包
+⑨ Debian 源密钥环缺失 → 宿主装 `debian-archive-keyring`
+⑩ 镜像内缺 UEFI 引导器 / ESP 填充工具 → Packages 补 `systemd-boot-efi`；宿主装 `mtools`
 
-**第 16 轮（进行中）**：`ToolsTree=no` + 宿主直装 `systemd-ukify`/`systemd-boot`
-（commit b15a40fe，run 37420133948）。若失败看 `gh run view <id> --log-failed`，
-下一个候选：mkosi 25.3 root 构建对 trixie 工具的其他要求（如 systemd-repart 版本），
-备选方案 = 装 `systemd-container` 或回退 ToolsTree 指向显式路径。
+**产物**：GitHub 工件 `ximo-os-0.1-raw`（约 1.2 GB raw 磁盘镜像，保留 7 天）
+下载：`gh run download <run-id> -n ximo-os-0.1-raw -D deliverables/ximo-os-image`
+（大文件经不稳定网络可能需重试；`gh api <archive_download_url>` 亦可）
 
-**成功后**：`gh run download <run-id> -n ximo-os-0.1-raw -D deliverables/ximo-os-image`，
-然后按 `os/README.md` 验收清单跑 `os/scripts/run-image-tcg.ps1` 引导。
+**下一步**：按 `os/README.md` 验收清单跑 `os/scripts/run-image-tcg.ps1` 引导
+（QEMU TCG 无需 VT-x，启动 2-5 分钟），核对 5 项：启动 ≤2min / journal 令牌 /
+health 200 / WS 派任务 completed / 审批路径。
 
 ## 6. 未完成工作（优先级）
 
-- **P0-1**：镜像构建收尾（§5）→ 5 项验收清单（os/README.md）
+- **P0-1**：镜像工件已产出（§5）→ 只剩 QEMU 引导的 5 项验收清单
 - **P1-1 阶段 2 剩余**：文档/浏览器两个 app 的语义化 JSON API；画面采集分辨率固定
   1280x800（set_resolution 后需同步，ScreenCapture 构造参数）
 - **P1-3 人工接管**（先问用户）：cockpit 键鼠 → `input.*` 消息 → 镜像内注入
