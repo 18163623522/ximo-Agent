@@ -119,7 +119,25 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 - 本机 WSL **有 mkosi 25.3，可 `mkosi summary` 本地验证配置解析**（但 WSL1 缺
   `open_tree()` 系统调用，无法本地构建——配置解析与构建要分开验证）
 
-## 5. 阶段 1 镜像构建：✅ 已成功（run 20，2026-10-06）
+## 5. 阶段 1 镜像构建：✅ 已完成（run 37454885945，2026-10-06）
+
+**最终状态**：CI 全绿（含 QEMU 引导冒烟通过），镜像已下载并完成离线验收：
+
+| 验收项 | 结果 |
+|---|---|
+| 分区表 | ✅ 512M EFI System + 689.7M Linux root (x86-64) |
+| ximo-host 用户（postinstall 判据） | ✅ uid=990, home=/opt/ximo-host, shell=/usr/sbin/nologin |
+| root 密码锁死 | ✅ /etc/shadow → `root:*` |
+| agent-hostd.cjs | ✅ 5,146,271 字节 @ /opt/ximo-host/dist-host/ |
+| 两个 systemd 单元 | ✅ agent-hostd.service + ximo-os-firstboot.service |
+| 开机自启软链 | ✅ multi-user.target.wants/ 下两个单元 |
+| firstboot 脚本 | ✅ /usr/local/sbin/ximo-os-firstboot.sh |
+
+**待做（需 QEMU）**：本机交互式引导验收 `npm run verify:image -- --token <令牌>`
+（脚本已就绪并对运行中的主机实测 4/4 通过）。QEMU 未安装，WSL1 亦无虚拟化能力
+（缺 open_tree() 系统调用），指引见 os/README.md。
+
+
 
 **20 轮 CI 排掉 10 个环境问题**（全部实测，接手勿重走）：
 ① AppArmor 禁非特权 userns → root 构建（`sudo -E bash build-image.sh`）
