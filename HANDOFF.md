@@ -99,6 +99,26 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 6. **测试基线**：46 文件 / 856+ 用例全绿（新增 host-client 12 例、desktop-bus 14 例、
    视觉回路 4 例）；typecheck 0 错误；host:build 通过
 
+
+**后续追加修复（2026-10-06 晚，debugfs 读镜像后发现 postinstall 未生效）**：
+镜像虽能引导但缺 `ximo-host` 系统用户 → 顺线索排查出 4 层连环问题：
+⑪ `PostInstallationScripts=` **必须放 `[Content]` 段** —— 放 `[Execution]` 段被
+   **静默忽略**（无警告）。用 `mkosi summary` 二分实验确证（同内容放两段对比）。
+⑫ provision 脚本 git 模式是 `100644` → CI 检出后无执行位，mkosi 报 not executable。
+   修：`git update-index --chmod=+x`（本地文件系统有执行位不代表 git 索引有）。
+⑬ `Packages=a, b` **逗号后不能有空格** —— mkosi 不 trim，' b' 会被当包名一部分
+   （CI 报 "Unable to locate package  systemd-sysv"，注意双空格）。
+⑭ postinstall 脚本自身：镜像内无 `/usr/sbin/nologin`（需 `login` 包）+ chroot 期间
+   `/etc/hostname` 只读 → 加入 login 包、脚本内探测 nologin 路径、hostname 写入容错。
+
+**⚠️ 排查纪律（血泪教训）**：
+- `mkosi summary` 的 `Packages:` 是**多行展示**，`grep "Packages:"` 只看首行会误判
+  "只解析到一项" → 用 `sed -n '/Packages:/,/Build Packages:/p'` 看整段
+- 用 `debugfs -R "ls /path" "img?offset=N"` 读镜像时**引号必须完整**，处理不当会得到
+  假阴性（曾据此误判"镜像无任何 ximo-OS 定制"，实际产物齐备）
+- 本机 WSL **有 mkosi 25.3，可 `mkosi summary` 本地验证配置解析**（但 WSL1 缺
+  `open_tree()` 系统调用，无法本地构建——配置解析与构建要分开验证）
+
 ## 5. 阶段 1 镜像构建：✅ 已成功（run 20，2026-10-06）
 
 **20 轮 CI 排掉 10 个环境问题**（全部实测，接手勿重走）：
