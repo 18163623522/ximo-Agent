@@ -16,6 +16,8 @@ export interface DesktopBusDeps {
   run?: RunFn
   launch?: (app: string, args: string[]) => { pid?: number }
   appName?: (pid: number) => string
+  /** 截图兜底 — screen.snapshot 动作的数据源（server 侧注入 ScreenCapture） */
+  snapshot?: () => Promise<string | null>
 }
 
 export const WINDOW_OPS = ['activate', 'close', 'move', 'resize', 'minimize', 'maximize', 'restore'] as const
@@ -136,6 +138,13 @@ export class DesktopBus {
         const text = String(params.text ?? '')
         await this.runCmd(CMD.clipboardWrite(text), text)
         return { done: true, length: text.length }
+      }
+      case 'screen.snapshot': {
+        // 兜底感知 — 纯 API 不足以判断画面时（如确认 GUI 渲染结果）用
+        if (!this.deps.snapshot) throw new Error('截图能力未启用（主机未配置画面采集）')
+        const dataUrl = await this.deps.snapshot()
+        if (!dataUrl) throw new Error('截图失败（桌面会话未就绪）')
+        return { screenshot: dataUrl }
       }
       default:
         throw new Error(`未知的桌面操作: ${String(action)}`)

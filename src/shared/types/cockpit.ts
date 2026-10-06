@@ -99,12 +99,13 @@ export type DesktopAction =
   | 'screen.size'   // 屏幕几何（width/height，交互坐标映射用）
   | 'clipboard.read'  // 读剪贴板（读取 GUI 应用内容的最快通路，零截图）
   | 'clipboard.write' // 写剪贴板（text：随后用 key ctrl+v 粘到目标应用）
+  | 'screen.snapshot' // 单帧截图（base64 data URL）— 纯 API 不够用时的兜底感知
 
 /** 合法动作集合 — 协议校验用 */
 export const DESKTOP_ACTIONS: DesktopAction[] = [
   'window.list', 'window.op', 'app.launch', 'app.list', 'key', 'type', 'active',
   'mouse.move', 'mouse.click', 'mouse.scroll', 'screen.size',
-  'clipboard.read', 'clipboard.write',
+  'clipboard.read', 'clipboard.write', 'screen.snapshot',
 ]
 
 /** 屏幕几何 — screen.size 响应 */

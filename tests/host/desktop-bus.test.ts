@@ -199,6 +199,22 @@ describe('desktop-bus — 路由与解析', () => {
     expect(calls[1].stdin).toBe('待粘贴文本')
   })
 
+  it('screen.snapshot — 兜底截图走注入的采集器；未注入时明确报错', async () => {
+    const withShot = new DesktopBus(fakeDeps(fakeRun().run))
+    // fakeDeps 未注入 snapshot → 明确的可读错误（而非静默失败）
+    await expect(withShot.dispatch('screen.snapshot')).rejects.toThrow('截图能力未启用')
+
+    const inj = new DesktopBus({
+      display: ':99',
+      run: fakeRun().run,
+      snapshot: async () => 'data:image/png;base64,SHOT',
+    })
+    expect(await inj.dispatch('screen.snapshot')).toEqual({ screenshot: 'data:image/png;base64,SHOT' })
+
+    const failing = new DesktopBus({ display: ':99', run: fakeRun().run, snapshot: async () => null })
+    await expect(failing.dispatch('screen.snapshot')).rejects.toThrow('截图失败')
+  })
+
   it('画面采集跟随分辨率 — 尺寸变化时重启 ffmpeg（否则画面被裁切）', async () => {
     let geom = '1280 800'
     let ffmpegAlive = false

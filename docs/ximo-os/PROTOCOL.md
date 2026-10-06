@@ -55,6 +55,9 @@
 | `mouse.click` | `x` `y` `button?`（left/middle/right） | `{}` |
 | `mouse.scroll` | `x?` `y?` `direction`（up/down/left/right） `amount?` | `{}` |
 | `screen.size` | — | `{ width, height }`（交互坐标映射用） |
+| `clipboard.read` | — | `{ text }`（读 GUI 应用内容的最快通路） |
+| `clipboard.write` | `text` | `{ done, length }`（随后可 `key ctrl+v` 粘贴） |
+| `screen.snapshot` | — | `{ screenshot }`（base64 data URL，纯 API 不够用时的兜底感知） |
 
 ### 桌面画面通道（v1，REST，Bearer 鉴权）
 

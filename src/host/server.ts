@@ -51,12 +51,13 @@ export function createHostServer(opts?: {
   const conns = new Set<WebSocket>()
   let queue: Promise<void> = Promise.resolve()
 
-  // desktop-bus — 桌面 API 总线（阶段 2）；注入优先，否则按 config.display 自建
-  const desktopBus = opts?.deps?.desktopBus ?? new DesktopBus({ display: config.display })
-  desktopBus.onEvent((e) => broadcast({ t: 'desktop.event', kind: e.kind, data: e.data }))
-
   // 画面采集 — 渲染端数据源（/api/screen/stream 代理 + snapshot 兜底）
   const screen = opts?.deps?.screen ?? new ScreenCapture({ display: config.display })
+
+  // desktop-bus — 桌面 API 总线（阶段 2）；注入优先，否则按 config.display 自建
+  const desktopBus = opts?.deps?.desktopBus
+    ?? new DesktopBus({ display: config.display, snapshot: () => screen.snapshot() })
+  desktopBus.onEvent((e) => broadcast({ t: 'desktop.event', kind: e.kind, data: e.data }))
 
   const broadcast = (msg: HostMsg): void => {
     const raw = JSON.stringify(msg)

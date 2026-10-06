@@ -16,7 +16,7 @@ import type { DesktopAction, DesktopWindow } from '../../shared/types/cockpit'
 const ACTIONS: DesktopAction[] = [
   'window.list', 'window.op', 'app.launch', 'app.list', 'key', 'type', 'active',
   'mouse.move', 'mouse.click', 'mouse.scroll', 'screen.size',
-  'clipboard.read', 'clipboard.write',
+  'clipboard.read', 'clipboard.write', 'screen.snapshot',
 ]
 
 function fmtWindow(w: DesktopWindow): string {
@@ -41,7 +41,8 @@ export class DesktopBusTool implements Tool {
       '动作: window.list 列窗口（结构化：id/应用/标题/位置尺寸）| window.op 窗口操作（op: activate/close/move/resize/minimize/maximize/restore，用 window_id 或 title 子串定位）| app.launch 启动应用（app 必填，args 可选数组）| app.list 运行中应用 | key 按键（keys 如 "ctrl+s"、"Return"）| type 输入文本（type 到当前聚焦窗口）| active 当前聚焦窗口\n' +
       '典型工作流：app.launch 打开应用 → window.list 确认窗口出现 → window.op(activate) 聚焦 → type/key 输入。全程纯 API，无需截图。\n' +
       '鼠标: mouse.move 移动（x,y）| mouse.click 点击（x,y,button: left/middle/right）| mouse.scroll 滚动（direction: up/down/left/right, amount 格数）；screen.size 读屏幕几何（交互坐标换算）。\n' +
-      '剪贴板: clipboard.read 读剪贴板（读取当前应用内容的首选方式——比截图快且准，无需视觉模型）| clipboard.write 写剪贴板（text 必填，随后用 key ctrl+v 粘贴到目标应用）。',
+      '剪贴板: clipboard.read 读剪贴板（读取当前应用内容的首选方式——比截图快且准，无需视觉模型）| clipboard.write 写剪贴板（text 必填，随后用 key ctrl+v 粘贴到目标应用）。\n' +
+      '截图: screen.snapshot 单帧截图（兜底感知——仅在纯 API 无法判断时用，如确认 GUI 渲染结果）。',
     parameters: {
       type: 'object',
       properties: {
@@ -73,6 +74,20 @@ export class DesktopBusTool implements Tool {
     try {
       const data = await this.bus.dispatch(action, toolCall.arguments)
       onChunk?.({ toolStatus: 'done', toolName: 'desktop' })
+
+      // 截图动作 — base64 只回状态（避免撑爆上下文），提示改用 vision 工具分析
+      if (action === 'screen.snapshot') {
+        const shot = (data as { screenshot?: string })?.screenshot
+        return {
+          toolCallId: toolCall.id,
+          toolName: 'desktop',
+          content: '📸 桌面截图已获取（base64 已随结果附带，供 UI 展示）。注意：纯 API 动作（window.list / clipboard.read）通常比截图更快更准。',
+          success: true,
+          ...(shot ? { screenshot: shot } : {}),
+          metadata: { action },
+        }
+      }
+
       return {
         toolCallId: toolCall.id,
         toolName: 'desktop',
