@@ -66,3 +66,7 @@ generated-images/
 dist-host/
 
 node-tar.tar.xz
+
+# 临时脚本（下载/调试用）
+.dl-loop.sh
+.ximo-*.mjs
