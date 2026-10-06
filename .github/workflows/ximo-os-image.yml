@@ -43,7 +43,7 @@ jobs:
           sudo dpkg-deb -x /tmp/mkosi.deb /opt/mkosi-253
           echo "/opt/mkosi-253/usr/bin" >> "$GITHUB_PATH"
           echo "PYTHONPATH=/opt/mkosi-253/usr/lib/python3/dist-packages" >> "$GITHUB_ENV"
-          mkosi --version
+          /opt/mkosi-253/usr/bin/mkosi --version
 
       - name: 构建 ximo-OS 0.1 磁盘镜像
         # root 运行 — Ubuntu 24.04 AppArmor 限制非特权 userns，mkosi 无根构建
