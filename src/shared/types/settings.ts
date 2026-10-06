@@ -201,6 +201,12 @@ export interface AppSettings {
   /** 右侧栏收起状态 — 收起后会话区获得完整宽度（Ctrl+B 切换） */
   rightPanelCollapsed?: boolean
 
+  // ---- ximo-OS 主机（cockpit-link 驾驶舱连接）----
+  /** 主机地址，如 http://127.0.0.1:17890（ws 协议自动归一化） */
+  hostUrl?: string
+  /** 主机访问令牌（首次启动时生成）；走 safeStorage 加密落盘 */
+  hostToken?: string
+
   // ---- 语音输入/输出 ----
 /** 流式结束后自动朗读助手回复（TTS） */
 ttsEnabled?: boolean

@@ -146,6 +146,9 @@ describe('IPC 通道契约 — main 注册 ↔ preload 引用', () => {
       'schedule:create', 'schedule:setPaused',
       'workspace:exec', 'workspace:launch', 'virtual-desktop:list',
       'window:minimize', 'checkpoint:list',
+      // ximo-OS 主机（cockpit-link 驾驶舱）
+      'host:connect', 'host:disconnect', 'host:health', 'host:dispatch',
+      'host:cancel', 'host:approvalRespond', 'host:tasks',
     ]) {
       expect(registeredHandle(), `通道未注册: ${ch}`).toContain(ch)
     }

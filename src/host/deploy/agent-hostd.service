@@ -1,0 +1,27 @@
+# agent-hostd — ximo-OS 阶段 0 系统服务
+# 安装：sudo cp agent-hostd.service /etc/systemd/system/ && sudo systemctl enable --now agent-hostd
+# 前提：WSL 需在 /etc/wsl.conf 开启 [boot] systemd=true（Windows 侧 wsl --shutdown 后重启生效）
+
+[Unit]
+Description=ximo-OS Agent Host Daemon (stage 0)
+After=network-online.target ximo-os-firstboot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 用专用低权用户跑（勿用 root）—— 阶段 3 会进一步按任务拆分用户
+User=ximo-host
+ExecStart=/usr/bin/node /opt/ximo-host/dist-host/agent-hostd.cjs
+Environment=XIMO_HOST_LISTEN=0.0.0.0:17890
+Environment=XIMO_HOST_DIR=/opt/ximo-host/config
+Environment=XIMO_HOST_DATA=/opt/ximo-host/data
+Restart=on-failure
+RestartSec=3
+# 基础沙箱 — 阶段 3 收紧为按任务隔离
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/ximo-host
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

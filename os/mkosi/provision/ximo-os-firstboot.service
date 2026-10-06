@@ -1,0 +1,13 @@
+[Unit]
+Description=ximo-OS first boot provisioning
+ConditionPathExists=!/var/lib/ximo-os/initialized
+# 必须先于 agent-hostd：目录与配置占位要就绪
+Before=agent-hostd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ximo-os-firstboot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

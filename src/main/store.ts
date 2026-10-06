@@ -46,6 +46,7 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
       if (redacted.apiKey) redacted.apiKey = ''
       if (redacted.visionApiKey) redacted.visionApiKey = ''
       if (redacted.sttApiKey) redacted.sttApiKey = ''
+      if (redacted.hostToken) redacted.hostToken = ''
       await writeFile(settingsFile, JSON.stringify(redacted, null, 2), 'utf-8')
     } else {
       await writeFile(settingsFile, JSON.stringify(settings, null, 2), 'utf-8')

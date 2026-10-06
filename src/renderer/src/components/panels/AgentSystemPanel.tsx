@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { X, Monitor, CalendarClock, Bot, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { X, Monitor, CalendarClock, Bot, AlertCircle, CheckCircle2, Server } from 'lucide-react'
 import { useStore } from '@renderer/store/useStore'
 import type { AgentDefinition, AgentInstance, } from '@shared/agent-definition'
 import type { AgentSchedule, ScheduleDraft } from '@shared/agent-schedule'
@@ -7,8 +7,9 @@ import { InstancesTab } from './AgentSystemPanel/InstancesTab'
 import { SchedulesTab } from './AgentSystemPanel/SchedulesTab'
 import { DefinitionsTab } from './AgentSystemPanel/DefinitionsTab'
 import { AssistToggle } from './AgentSystemPanel/AssistToggle'
+import { RemoteHostTab } from './AgentSystemPanel/RemoteHostTab'
 
-type TabId = 'instances' | 'schedules' | 'definitions'
+type TabId = 'instances' | 'schedules' | 'definitions' | 'host'
 
 const LAST_SEEN_KEY = 'ximo-agent-system-last-seen'
 
@@ -210,6 +211,7 @@ export function AgentSystemPanel(): React.ReactElement | null {
     { id: 'instances', label: '实例', icon: Bot },
     { id: 'schedules', label: '定时任务', icon: CalendarClock },
     { id: 'definitions', label: 'Agent 定义', icon: Monitor },
+    { id: 'host', label: '远程主机', icon: Server },
   ]
 
   return (
@@ -306,6 +308,7 @@ export function AgentSystemPanel(): React.ReactElement | null {
               onDelete={(id) => void handleDeleteDefinition(id)}
             />
           )}
+          {activeTab === 'host' && <RemoteHostTab />}
         </div>
       </div>
     </div>

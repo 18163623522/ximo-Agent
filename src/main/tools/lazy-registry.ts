@@ -228,12 +228,12 @@ export const modeToolNames: Record<string, string[]> = {
 const loadedModules = new Set<string>()
 
 /**
- * 确保指定模式的所有工具已加载并注册到 toolRegistry。
+ * 确保指定模块组的所有工具已加载并注册到 toolRegistry。
  * 已加载的模块组不会重复加载。
+ * （agent-host 主机运行时复用此函数按需加载可移植工具域）
  */
-export async function ensureModeToolsLoaded(mode: string): Promise<void> {
-  const modules = modeModules[mode] || []
-  const toLoad = modules.filter((m) => !loadedModules.has(m))
+export async function ensureModuleGroupsLoaded(groups: string[]): Promise<void> {
+  const toLoad = groups.filter((m) => !loadedModules.has(m))
 
   if (toLoad.length === 0) return
 
@@ -266,4 +266,12 @@ export async function ensureModeToolsLoaded(mode: string): Promise<void> {
     }
     loadedModules.add(result.mod)
   }
+}
+
+/**
+ * 确保指定模式的所有工具已加载并注册到 toolRegistry。
+ * 已加载的模块组不会重复加载。
+ */
+export async function ensureModeToolsLoaded(mode: string): Promise<void> {
+  return ensureModuleGroupsLoaded(modeModules[mode] || [])
 }

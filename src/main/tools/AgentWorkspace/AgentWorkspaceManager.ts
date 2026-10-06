@@ -239,12 +239,17 @@ class AgentWorkspaceManagerImpl {
     return { ...this.state }
   }
 
+  /** 截图（含留存元数据）— dataUrl 供 UI 展示，savedPath 是 Windows 侧留存路径（vision_analyze 用） */
+  async screenshotWithMeta(): Promise<{ dataUrl: string; savedPath?: string } | null> {
+    if (!this.wslReady) return null
+    const shot = await ops.screenshot()
+    if (shot) this.state.lastScreenshot = shot.dataUrl
+    return shot
+  }
+
   /** 截图 — 返回 base64 data URL（成功时写入状态缓存 lastScreenshot） */
   async screenshot(): Promise<string | null> {
-    if (!this.wslReady) return null
-    const dataUrl = await ops.screenshot()
-    if (dataUrl) this.state.lastScreenshot = dataUrl
-    return dataUrl
+    return (await this.screenshotWithMeta())?.dataUrl ?? null
   }
 
   private ensureStreamPromise: Promise<void> | null = null

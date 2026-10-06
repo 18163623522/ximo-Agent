@@ -4,6 +4,7 @@ import { dirname, resolve, normalize, basename, join } from 'path'
 import { tmpdir } from 'os'
 import type { Tool } from '@main/tools/Tool'
 import type { ToolDefinition, ToolCall, ToolResult, StreamChunk } from '@shared/types'
+import { checkWriteAccess } from '@main/security-guard'
 
 /** 在写入前备份已有文件到系统临时目录（不污染项目目录），返回快照路径 */
 async function snapshotIfExists(filePath: string): Promise<string | null> {
@@ -65,6 +66,15 @@ export class FileWriteTool implements Tool {
     }
 
     const normalized = normalize(resolve(filePath))
+
+    // 写入白名单 — security-guard 的文档化意图（file_edit/file_write 均受控），
+    // 此前只有 file_edit 挂了检查，allow 级的 file_write 可写任意路径；
+    // 白名单为空时保持旧行为（放行）
+    const writeAccess = checkWriteAccess(normalized)
+    if (!writeAccess.allowed) {
+      onChunk?.({ toolStatus: 'done', toolName: 'file_write' })
+      return this.error(toolCall.id, writeAccess.reason || '路径不在允许写入的目录范围内')
+    }
 
     onChunk?.({ toolStatus: 'calling', toolName: 'file_write' })
 

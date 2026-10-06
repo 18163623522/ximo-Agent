@@ -13,7 +13,7 @@ import { DATA_DIR } from './paths'
 const SECURE_FILE = join(DATA_DIR, 'secure.enc')
 
 /** 需要加密的敏感字段名 */
-const SENSITIVE_KEYS = ['apiKey', 'visionApiKey', 'sttApiKey'] as const
+const SENSITIVE_KEYS = ['apiKey', 'visionApiKey', 'sttApiKey', 'hostToken'] as const
 
 type SensitiveKey = typeof SENSITIVE_KEYS[number]
 

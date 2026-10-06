@@ -32,7 +32,7 @@ export class WslDesktopTool implements Tool {
     name: 'wsl_desktop',
     description:
       '操作 WSL 隔离桌面环境。通过 action 参数指定操作类型。\n' +
-      '感知: screenshot 截屏（返回 base64 图片）| window_list 列出窗口（id+标题）| clipboard_read 读剪贴板\n' +
+      '感知: screenshot 截屏（返回 base64 图片并留存文件路径；用 vision_analyze(file_path="返回的路径") 可让视觉模型分析画面）| window_list 列出窗口（id+标题）| clipboard_read 读剪贴板\n' +
       '鼠标: click 点击（x,y，可选 button）| double_click 双击 | drag 拖拽（x,y 起点 → x2,y2 终点）| mouse_move 移动 | scroll 滚动（direction: up/down/left/right，amount 格数）\n' +
       '键盘: key_press 按键（如 "ctrl+c"、"Return"）| key_down 按住 | key_up 松开（组合可实现按住 Shift 再点击）| type 输入文本 | paste 经剪贴板粘贴（CJK 直输受限的应用用这个）\n' +
       '窗口: window_op（op: activate/close/move/resize/minimize/maximize/restore；用 window_id 或 title 子串定位；move/resize 传 x,y,w,h，-1/缺省为保持不变）\n' +
@@ -98,18 +98,23 @@ export class WslDesktopTool implements Tool {
       let success = false
       let content = ''
       let screenshot: string | undefined
+      let shotPath: string | undefined
 
       switch (action) {
-        case 'screenshot':
-          const img = await agentWorkspaceManager.screenshot()
-          if (img) {
+        case 'screenshot': {
+          const shot = await agentWorkspaceManager.screenshotWithMeta()
+          if (shot) {
             success = true
-            content = '📸 桌面截图已获取'
-            screenshot = img
+            screenshot = shot.dataUrl
+            shotPath = shot.savedPath
+            content = shot.savedPath
+              ? `📸 桌面截图已获取，已留存：${shot.savedPath}\n需要看清画面内容时，调用 vision_analyze 并传 file_path="${shot.savedPath}"。`
+              : '📸 桌面截图已获取'
           } else {
             content = '❌ 截图失败，请确认工作区已启动'
           }
           break
+        }
 
         case 'click':
           success = await agentWorkspaceManager.click(x, y, button as 'left' | 'right' | 'middle')
@@ -266,8 +271,11 @@ export class WslDesktopTool implements Tool {
 
       // 操作后自动截图（读操作与 exec 除外）— 用户面板可见每次操作的即时画面
       if (success && !NO_AUTOSHOT_ACTIONS.has(action)) {
-        const autoShot = await agentWorkspaceManager.screenshot()
-        if (autoShot) screenshot = autoShot
+        const autoShot = await agentWorkspaceManager.screenshotWithMeta()
+        if (autoShot) {
+          screenshot = autoShot.dataUrl
+          shotPath = autoShot.savedPath
+        }
       }
 
       return {
@@ -276,7 +284,10 @@ export class WslDesktopTool implements Tool {
         content,
         success,
         screenshot,
-        metadata: { action, x, y, button, keys, text: text.slice(0, 100), command: command.slice(0, 100), app }
+        metadata: {
+          action, x, y, button, keys, text: text.slice(0, 100), command: command.slice(0, 100), app,
+          ...(shotPath ? { screenshotPath: shotPath } : {}),
+        }
       }
     } catch (e) {
       return this.error(toolCall.id, `WSL 桌面操作失败 [${action}]：${(e as Error).message}`)

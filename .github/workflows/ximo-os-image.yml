@@ -1,0 +1,66 @@
+name: ximo-OS 镜像
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'os/**'
+      - 'src/host/**'
+      - 'scripts/host-build.mjs'
+      - 'src/main/Permission.ts'
+      - 'src/main/security-guard.ts'
+      - 'src/shared/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖（跳过 electron 二进制下载）
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: npm ci
+
+      - name: 构建主机运行时（agent-hostd.cjs）
+        run: npm run host:build
+
+      - name: 安装 mkosi 与 qemu
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils
+
+      - name: 构建 ximo-OS 0.1 磁盘镜像
+        run: bash os/scripts/build-image.sh
+
+      - name: 引导冒烟（best-effort — QEMU 无 KVM 用 TCG，较慢）
+        continue-on-error: true
+        run: |
+          cd os/mkosi
+          mkosi qemu --qemu-args "-nic user,model=virtio-net-pci,hostfwd=tcp::12222-:22" &
+          QPID=$!
+          for i in $(seq 1 80); do
+            if timeout 2 bash -c '</dev/tcp/127.0.0.1/12222' 2>/dev/null; then
+              echo "✅ SSH 端口就绪 — 镜像可引导，agent-hostd 服务随系统启动"
+              kill $QPID 2>/dev/null || true
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "❌ 240s 内未探测到 SSH 端口"
+          exit 1
+
+      - name: 上传镜像工件
+        uses: actions/upload-artifact@v4
+        with:
+          name: ximo-os-0.1-raw
+          path: os/mkosi/out/*.raw
+          retention-days: 7
+          compression-level: 0

@@ -9,22 +9,60 @@
 
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { mkdirSync, realpathSync } from 'fs'
 import { decodeWslOutput } from './wsl-decode'
 import { DISPLAY, WSL_DISTRIBUTION, WSL_STREAM_PORT, execWslDisplay, execWslRaw } from './wsl-exec'
 import { WSL_INIT_SCRIPT } from './init-script'
 
 const execFileAsync = promisify(execFile)
 
-/** 截图 — 返回 base64 data URL */
-export async function screenshot(): Promise<string | null> {
+/**
+ * Windows 侧截图留存目录 — 视觉回路的关键一跳：
+ * 截图 PNG 同时写到 Windows 临时目录，Agent 拿到路径后可调
+ * vision_analyze(file_path=…) 让视觉模型"看"画面（模型读不了 WSL 内的 /tmp）。
+ * 盘符未挂载（无 /mnt/c）等情况静默退回 null —— 仅 base64，不留存。
+ */
+let shotsDir: { win: string; wsl: string } | null | undefined
+function getShotsDir(): { win: string; wsl: string } | null {
+  if (shotsDir !== undefined) return shotsDir
   try {
-    const tmpFile = `/tmp/agent-workspace-screenshot-${Date.now()}.png`
-    await execWslDisplay(`import -window root ${tmpFile} 2>/dev/null`)
-    const base64 = await execWslRaw(`base64 -w0 ${tmpFile} 2>/dev/null && rm -f ${tmpFile}`)
+    let base = realpathSync(tmpdir()) // 展开 8.3 短路径（ADMINI~1），/mnt 下未必可解析
+    if (base.startsWith('\\\\?\\')) base = base.slice(4)
+    const win = join(base, 'ximo-agent-shots')
+    const wsl = `/mnt/${win[0].toLowerCase()}${win.slice(2).replace(/\\/g, '/')}`
+    mkdirSync(win, { recursive: true })
+    shotsDir = { win, wsl }
+  } catch {
+    shotsDir = null
+  }
+  return shotsDir
+}
+
+/**
+ * 截图 — 返回 base64 data URL（UI 展示用）。
+ * savedPath 为 Windows 侧留存文件路径（给 vision_analyze 用），可能缺省。
+ */
+export async function screenshot(): Promise<{ dataUrl: string; savedPath?: string } | null> {
+  try {
+    const dir = getShotsDir()
+    const name = `shot-${Date.now()}.png`
+    const target = dir ? `${dir.wsl}/${name}` : `/tmp/agent-workspace-screenshot-${name}`
+    await execWslDisplay(`import -window root "${target}" 2>/dev/null`)
+    // 留存时顺带清理 24h 前的旧截图（防无限堆积）；不留存则读完即删（旧行为）
+    const base64 = await execWslRaw(
+      `base64 -w0 "${target}" 2>/dev/null` +
+      (dir
+        ? `; find "${dir.wsl}" -name 'shot-*.png' -mmin +1440 -delete 2>/dev/null`
+        : ` && rm -f "${target}"`)
+    )
     const trimmed = base64.trim()
     if (!trimmed) return null
-    const dataUrl = `data:image/png;base64,${trimmed}`
-    return dataUrl
+    return {
+      dataUrl: `data:image/png;base64,${trimmed}`,
+      ...(dir ? { savedPath: join(dir.win, name) } : {}),
+    }
   } catch {
     return null
   }

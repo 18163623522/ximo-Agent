@@ -7,6 +7,7 @@ import { filesApi } from '../shared/preload-api/files'
 import { browserApi } from '../shared/preload-api/browser'
 import { computerApi } from '../shared/preload-api/computer'
 import { agentApi } from '../shared/preload-api/agent'
+import { hostApi } from '../shared/preload-api/host'
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 // 内聚 API 组拆分至 ../shared/preload-api/，此处按原始键顺序展开合并（行为与类型不变）
@@ -18,6 +19,7 @@ const api = {
   ...browserApi,
   ...computerApi,
   ...agentApi,
+  ...hostApi,
   // 系统字体列表
   fonts: {
     list: (): Promise<string[]> => ipcRenderer.invoke('fonts:list')

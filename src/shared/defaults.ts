@@ -122,5 +122,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customTransitionAnimation: undefined,
 
   // ---- 工作分摊（Agent 感知用户电脑操作）— 隐私敏感，默认关闭 ----
-  assistWatchEnabled: false
+  assistWatchEnabled: false,
+
+  // ---- ximo-OS 主机（cockpit-link 驾驶舱）----
+  hostUrl: '',
+  hostToken: ''
 }
