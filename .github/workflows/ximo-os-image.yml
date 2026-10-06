@@ -37,7 +37,7 @@ jobs:
           sudo apt-get update -qq
           # systemd-ukify：mkosi 构建 bootable 磁盘镜像的必需工具（24.04 独立拆包）
           # python3-pefile：ukify 的依赖
-          sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils systemd-ukify python3-pefile
+          sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils systemd-ukify python3-pefile systemd-boot
 
       - name: 构建 ximo-OS 0.1 磁盘镜像
         # root 运行 — Ubuntu 24.04 AppArmor 限制非特权 userns，mkosi 无根构建
