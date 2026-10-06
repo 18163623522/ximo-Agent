@@ -38,7 +38,9 @@ jobs:
           sudo apt-get install -y -qq mkosi qemu-system-x86 qemu-utils
 
       - name: 构建 ximo-OS 0.1 磁盘镜像
-        run: bash os/scripts/build-image.sh
+        # root 运行 — Ubuntu 24.04 AppArmor 限制非特权 userns，mkosi 无根构建
+        # 会报 Operation not permitted / uid 65436 映射失败；root 直建绕过
+        run: sudo -E bash os/scripts/build-image.sh
 
       - name: 引导冒烟（best-effort — QEMU 无 KVM 用 TCG，较慢）
         continue-on-error: true
