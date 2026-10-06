@@ -56,6 +56,13 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     // 视觉分析 — 只读（读图片走视觉模型），与 file_read/web_fetch 同级；
     // 此前未列入任何 allow → 回退保守 ask，导致读图也要审批
     { tool: 'vision_analyze' },
+    // 联网缓存/调研、记忆写入、技能调用 — 无外部副作用（写的是自有数据目录）。
+    // 此前未列入 allow → 回退 ask；主机侧无人值守（fail-closed）下这些工具
+    // 形同虚设，且白占上下文、诱导模型尝试后必然失败
+    { tool: 'web_cache' },
+    { tool: 'web_research' },
+    { tool: 'memory_update' },
+    { tool: 'skill_invoke' },
     // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）
@@ -133,6 +140,9 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'web_fetch' },
     { tool: 'web_cache' },
     { tool: 'web_research' },
+    // 记忆写入与技能调用 — 无外部副作用（与主机无人值守场景一致的理由）
+    { tool: 'memory_update' },
+    { tool: 'skill_invoke' },
     { tool: 'file_read' },
     { tool: 'file_list' },
     { tool: 'file_search' },

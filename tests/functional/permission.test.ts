@@ -86,6 +86,20 @@ describe('[功能] 权限决策引擎', () => {
       }
     })
 
+    it('无外部副作用的工具 allow（无人值守主机不受影响）', () => {
+      // 回归：这些工具写的是自有数据目录（缓存/记忆/技能），此前未列入 allow →
+      // 回退 ask。主机无人值守 = fail-closed，等于给 Agent 挂了 4 个永远失败的工具。
+      for (const t of ['web_cache', 'web_research', 'memory_update', 'skill_invoke']) {
+        for (const cfg of [CODING_DEFAULT_CONFIG, OFFICE_DEFAULT_CONFIG]) {
+          expect(evaluate(cfg, t, ''), `${t} 在配置中应为 allow`).toBe('allow')
+        }
+      }
+      // 对照：真正有副作用的仍须审批，不得一并放开
+      expect(evaluate(CODING_DEFAULT_CONFIG, 'terminal_exec', '')).toBe('ask')
+      expect(evaluate(CODING_DEFAULT_CONFIG, 'file_delete', '')).toBe('ask')
+      expect(evaluate(CODING_DEFAULT_CONFIG, 'code_execute', '')).toBe('ask')
+    })
+
     it('写操作 ask', () => {
       expect(evaluate(OFFICE_DEFAULT_CONFIG, 'file_write', '')).toBe('ask')
       expect(evaluate(OFFICE_DEFAULT_CONFIG, 'file_edit', '')).toBe('ask')
