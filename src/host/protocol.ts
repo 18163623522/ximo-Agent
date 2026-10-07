@@ -16,7 +16,7 @@ export type {
 } from '../shared/types/cockpit'
 export { HOST_VERSION } from '../shared/types/cockpit'
 
-import { DESKTOP_ACTIONS, type ClientMsg, type DesktopAction } from '../shared/types/cockpit'
+import { type ClientMsg, type DesktopAction } from '../shared/types/cockpit'
 
 /** 解析并校验客户端消息 — 非法返回 null（调用方回 error 帧并断开） */
 export function parseClientMsg(raw: string): ClientMsg | null {
@@ -37,8 +37,11 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         ? { t: 'approval.respond', reqId: m.reqId, allow: m.allow }
         : null
     case 'desktop.request': {
-      if (typeof m.reqId !== 'string') return null
-      if (typeof m.action !== 'string' || !DESKTOP_ACTIONS.includes(m.action as DesktopAction)) return null
+      // 注意：action 的合法性**不在此校验**——未知动作放行到 DesktopBus.dispatch
+      // 的 default 分支抛错，由 server 转成 desktop.reply(ok:false)。
+      // 在这里拒绝会导致「驾驶舱新增动作 + 主机未升级」表现为整条连接被切断，
+      // 而不是一次可恢复的动作级失败。
+      if (typeof m.reqId !== 'string' || typeof m.action !== 'string') return null
       const params = typeof m.params === 'object' && m.params !== null
         ? m.params as Record<string, unknown>
         : undefined

@@ -12,6 +12,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { parseClientMsg, HOST_VERSION, HostMsg } from './protocol'
+import { DESKTOP_ACTIONS } from '../shared/types/cockpit'
 import { runTask } from './agent/task-runner'
 import { DesktopBus } from './desktop/bus'
 import { ScreenCapture } from './desktop/screen'
@@ -158,7 +159,13 @@ export function createHostServer(opts?: {
     }
     if (req.url === '/api/health') {
       if (!authed) return json(401, { ok: false, error: '需要 Bearer 令牌' })
-      return json(200, { ok: true, name: 'ximo-host', version: HOST_VERSION, mode: config.mode })
+      return json(200, {
+        ok: true,
+        name: 'ximo-host',
+        version: HOST_VERSION,
+        mode: config.mode,
+        desktop: { enabled: desktopBus.enabled, display: config.display },
+      })
     }
     if (req.url === '/api/tasks') {
       if (!authed) return json(401, { ok: false, error: '需要 Bearer 令牌' })
@@ -212,7 +219,8 @@ export function createHostServer(opts?: {
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
       conns.add(ws)
-      ws.send(JSON.stringify({ t: 'hello', version: HOST_VERSION, name: 'ximo-host' }))
+      // hello 附带能力列表 — 驾驶舱据此做动作级降级，而不是靠断连发现版本偏斜
+      ws.send(JSON.stringify({ t: 'hello', version: HOST_VERSION, name: 'ximo-host', actions: DESKTOP_ACTIONS }))
       ws.on('message', (raw) => {
         const msg = parseClientMsg(String(raw))
         if (!msg) {

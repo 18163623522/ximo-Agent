@@ -58,6 +58,8 @@ export class HostClient {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private graceTimer: ReturnType<typeof setTimeout> | null = null
   private reconnectAttempt = 0
+  /** 主机支持的桌面动作（hello.actions 能力协商）；旧主机无此字段时为 null */
+  private supportedActions: Set<string> | null = null
   /** 主动断开标记 — 抑制重连 */
   private intentionalClose = false
 
@@ -203,6 +205,8 @@ export class HostClient {
         if (msg.version !== HOST_VERSION) {
           this.setStatus({ status: 'connected', url: this.url, error: `主机协议版本 v${msg.version}，客户端 v${HOST_VERSION}` })
         }
+        // 能力协商 — 记录主机支持的桌面动作，desktopRequest 据此本地降级
+        this.supportedActions = msg.actions ? new Set(msg.actions) : null
         break
       case 'pong':
         break
@@ -315,6 +319,11 @@ export class HostClient {
   /** desktop-bus 调用 — 等待 desktop.reply（reqId 由客户端生成便于关联） */
   desktopRequest(action: DesktopAction, params?: Record<string, unknown>): Promise<{ ok: boolean; data?: unknown; error?: string }> {
     if (!this.isConnected()) return Promise.resolve({ ok: false, error: '未连接到主机' })
+    // 能力降级 — 主机 hello 报告的动作清单里没有的动作，本地直接失败，
+    // 不发帧等 10s 超时（旧主机 hello 无 actions 字段 → 跳过检查）
+    if (this.supportedActions && !this.supportedActions.has(action)) {
+      return Promise.resolve({ ok: false, error: `主机不支持该桌面动作: ${action}（主机版本过旧）` })
+    }
     const reqId = `dreq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     return new Promise((resolve) => {
       const timer = setTimeout(() => {

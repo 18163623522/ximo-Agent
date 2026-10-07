@@ -33,6 +33,8 @@ export interface HelloMsg {
   t: 'hello'
   version: number
   name: string
+  /** 主机支持的桌面动作清单（能力协商；驾驶舱据此降级而非靠断连发现） */
+  actions?: DesktopAction[]
 }
 
 export interface TaskAcceptedMsg { t: 'task.accepted'; id: string }
@@ -85,29 +87,29 @@ export type HostMsg = HelloMsg | TaskAcceptedMsg | TaskStatusMsg | TaskChunkMsg
 // 桌面本体是 API 总线（headless-first）：窗口/应用是结构化数据，GUI 只是渲染端之一。
 // 驾驶舱与主机侧 Agent 共用同一总线 —— 这是「同一办公任务纯 API 零截图完成」的地基。
 
-export type DesktopAction =
-  | 'window.list'   // 结构化窗口树（按进程分组）
-  | 'window.op'     // activate/close/move/resize/minimize/maximize/restore
-  | 'app.launch'    // 启动应用（脱离会话常驻）
-  | 'app.list'      // 运行中的应用（按进程聚合窗口）
-  | 'app.available' // 可启动的应用清单（扫描 .desktop 条目，避免猜应用名）
-  | 'key'           // 按键（如 "ctrl+s"、"Return"）
-  | 'type'          // 输入文本到聚焦窗口
-  | 'active'        // 当前聚焦窗口
-  | 'mouse.move'    // 移动鼠标（x,y）
-  | 'mouse.click'   // 点击（x,y,button）
-  | 'mouse.scroll'  // 滚动（direction: up/down/left/right, amount）
-  | 'screen.size'   // 屏幕几何（width/height，交互坐标映射用）
-  | 'clipboard.read'  // 读剪贴板（读取 GUI 应用内容的最快通路，零截图）
-  | 'clipboard.write' // 写剪贴板（text：随后用 key ctrl+v 粘到目标应用）
-  | 'screen.snapshot' // 单帧截图（base64 data URL）— 纯 API 不够用时的兜底感知
+/** 合法动作集合 — 协议校验与 hello 能力列表的单一来源。
+ *  DesktopAction 类型从本数组派生：新增动作只需加进数组（忘加 = 类型不存在，
+ *  typecheck 立即红），「union 与数组漂移 → 运行时拒绝合法动作」在结构上不可能发生。 */
+export const DESKTOP_ACTIONS = [
+  'window.list',   // 结构化窗口树（按进程分组）
+  'window.op',     // activate/close/move/resize/minimize/maximize/restore
+  'app.launch',    // 启动应用（脱离会话常驻）
+  'app.list',      // 运行中的应用（按进程聚合窗口）
+  'app.available', // 可启动的应用清单（扫描 .desktop 条目，避免猜应用名）
+  'key',           // 按键（如 "ctrl+s"、"Return"）
+  'type',          // 输入文本到聚焦窗口
+  'active',        // 当前聚焦窗口
+  'mouse.move',    // 移动鼠标（x,y）
+  'mouse.click',   // 点击（x,y,button）
+  'mouse.scroll',  // 滚动（direction: up/down/left/right, amount）
+  'screen.size',   // 屏幕几何（width/height，交互坐标映射用）
+  'clipboard.read',  // 读剪贴板（读取 GUI 应用内容的最快通路，零截图）
+  'clipboard.write', // 写剪贴板（text：随后用 key ctrl+v 粘到目标应用）
+  'screen.snapshot', // 单帧截图（base64 data URL）— 纯 API 不够用时的兜底感知
+] as const
 
-/** 合法动作集合 — 协议校验用 */
-export const DESKTOP_ACTIONS: DesktopAction[] = [
-  'window.list', 'window.op', 'app.launch', 'app.list', 'app.available', 'key', 'type', 'active',
-  'mouse.move', 'mouse.click', 'mouse.scroll', 'screen.size',
-  'clipboard.read', 'clipboard.write', 'screen.snapshot',
-]
+/** 桌面动作类型 — 由 DESKTOP_ACTIONS 数组派生（单一来源，勿手写 union） */
+export type DesktopAction = (typeof DESKTOP_ACTIONS)[number]
 
 /** 可启动应用条目 — app.available 的数据形态（来自 .desktop 条目） */
 export interface DesktopAppEntry {
@@ -179,6 +181,8 @@ export interface HostHealth {
   name?: string
   version?: number
   mode?: string
+  /** 桌面栈状态（阶段 B）— CI 冒烟据此断言 X 会话在位 */
+  desktop?: { enabled: boolean; display: string }
   error?: string
 }
 
