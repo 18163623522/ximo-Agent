@@ -1,7 +1,7 @@
 # HANDOFF.md — 交接文档：ximo-OS 二次开发（供接手的编程 Agent）
 
 > 写给下一个接手的编程 Agent。读完这份文档，你应当知道：项目在哪、已完成什么、
-> 还剩什么、每件事怎么做、有哪些坑。**本文档由 2026-10-06 会话更新，
+> 还剩什么、每件事怎么做、有哪些坑。**本文档由 2026-10-07 会话更新，
 > 所述"实测"均为真实执行过的验证。**
 
 ---
@@ -12,7 +12,7 @@
   适配自家 Agent 的 Linux OS；已拍板"直接自研"路线，四阶段推进）
 - **当前位置**：阶段 0/0.5 ✅、阶段 1 工程件 ✅（CI 镜像构建调试到第 16 轮，见 §5）、
   **P0-2 驾驶舱对接 ✅**、**P1-2 视觉回路 ✅**、**P1-1 阶段 2 内核+桌面渲染端 ✅**
-  （desktop-bus + ximo-OS 桌面 UI）、阶段 2 剩余（文档/浏览器 app API）未开始
+  （desktop-bus + ximo-OS 桌面 UI）、**阶段 A 止血与坐实 ✅**（A1-A5 全绿 + 红灯实测通过）
 - **主机已真实可用**：agent-hostd v1 常驻运行 + 密钥已配 + E2E 冒烟通过
   （WS 派任务 → LLM → 1.1s 返回「链路正常」）
 - **关键约束**：本机 BIOS 无 VT-x → WSL2/Hyper-V/KVM 永久不可用；WSL1 只有 Debian trixie
@@ -85,20 +85,125 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 应用启动 + 键鼠注入 + 画布点击坐标映射）。画面经 `ximo-host-cam://` 自定义协议
 （src/main/host/cam-protocol.ts）代理主机 `/api/screen/stream`。
 
-## 4. 本会话（2026-10-06）完成清单
+## 4. 本会话（2026-10-07）完成清单 — 阶段 A 止血与坐实
 
-1. **cockpit 全链路对接（P0-2）**：协议类型下沉 shared、HostClient、host:* IPC 8+3 通道、
-   preload、RemoteHostTab、HostClient 集成测试 12 例（真 server 驱动）
-2. **视觉回路（P1-2）**：截图留存 Windows 临时目录（/mnt/c 挂载，24h 清理）→
-   `vision_analyze(file_path=…)` 闭环；未走 image_url 直传（理由见 §7 决策 10）
-3. **desktop-bus 内核（P1-1 上半）**：协议 v1 `desktop.request/reply/event`、
-   window/app/key/type/mouse/screen.size 全动作、事件轮询、主机 Agent `desktop` 工具
-4. **ximo-OS 桌面 UI（P1-1 下半·渲染端）**：screen.ts 采集、/api/screen/stream+snapshot
-   （Bearer）、ximo-host-cam:// 协议、XimoOsDesktopPanel
-5. **主机真实部署**：v1 部署 + 任务计划保活 + 密钥配置 + E2E 冒烟通过
-6. **测试基线**：46 文件 / 856+ 用例全绿（新增 host-client 12 例、desktop-bus 14 例、
-   视觉回路 4 例）；typecheck 0 错误；host:build 通过
+### A1 修 skill 组加载断裂 + 灭类 lint ✅
+- **根因**：esbuild CJS 产物中 `import.meta` 被降级为 `{}`，
+  `fileURLToPath(new URL('.', import.meta.url))` 抛 `TypeError: Invalid URL`，
+  错误被 lazy-registry 吞掉 → skill 组 4 个工具从未注册
+- **修复**：`RrwebRecorder.ts`/`RrwebReplayer.ts`/`constants.ts` 改为 `__dirname` 兼容写法
+  （参照 `host/tools/office-docs-tool.ts` 同型 bug 修复）；`tokenizer.ts` 同修
+- **灭类防线**：`.eslintrc.cjs` 加 `no-restricted-syntax` 规则禁止 host 构建路径使用 `import.meta.url`
+- **验证**：`npm run host:build` → `host-verify.mjs` 全量 29 工具注册通过
 
+### A2 产物工具清点脚本 ✅
+- 新增 `scripts/host-verify.mjs`：加载 `dist-host/agent-hostd.cjs`（验证模式 `XIMO_HOST_VERIFY=1`），
+  调用 `ensureModuleGroupsLoaded(HOST_TOOL_GROUPS)`，断言注册数 == `HOST_TOOL_NAMES.length`
+- `src/host/index.ts` 加 `verifyMode()` 函数
+- `package.json` 的 `host:build` 脚本尾部自动执行清点
+- **红灯实测**：故意改坏 `create_tool` → `create_tool_broken` → 脚本红灯（28/29 + exit 1）→ 还原
+
+### A3 runCmd 归因缓存修复 + coord() 坐标强转 ✅
+- **⚠ 复盘补记（2026-10-07 第二会话）**：本段初版实现用 `err.status` 判别非零退出码，
+  但**真实 execFile 错误对象没有 status 字段**（退出码在 `err.code` 上，数字）——
+  该分支是死代码，rc≠0 会落进「会话不可用」缓存分支，且单测用虚构的 `status:1`
+  模拟错误所以全绿。已修：判据改 `typeof err.code === 'number'`，单测错误形状
+  改为真实形状，并恢复「成功即清缓存」自愈语义。**教训：fake 错误形状必须与真实
+  execFile 一致（见 bus.ts 注释）。**
+- **runCmd**：区分三类错误：
+  1. `ENOENT`（工具缺失，code='ENOENT' 字符串）→ 真故障，置位 `unavailableReason`
+  2. 非零退出码（code=数字；getactivewindow 无聚焦、xclip 空读）→ 正常空态，**不置位**
+  3. timeout/信号/未知 → 会话不可用，置位；**成功即清缓存（自愈）**
+- **coord()**：非数字 / null / undefined / boolean → 抛参数错误（不归零，避免误点击 (0,0)）
+- **灭类**：grep runCmd 全部调用点，逐一归类并注释（active / clipboard.read / availableApps / checkEvents）
+- **单测**：新增「空态不置缓存」「坏坐标报错且不点击」等用例（24 tests 全绿）
+
+### A4 CI 冒烟升级 + mkosi summary 校验 ✅
+- `build-image.sh`：构建前 `mkosi summary` 并断言 Packages / Postinstall Scripts 解析非空
+  （防静默忽略——曾因 PostInstallationScripts 放错段导致镜像无定制）。
+  **⚠ 复盘补记：初版断言 grep `PostInstallationScripts`，但 mkosi 25.3 summary 显示为
+  `Postinstall Scripts:`（带空格）——断言永远失败，已按实测输出修正。防线本身
+  也必须被红灯实测，否则就是死防线。**
+- `ximo-os-image.yml`：移除 `continue-on-error: true`；冒烟升级为
+  cockpit-link 端口就绪 → 串口日志提取令牌 → `/api/health` 200 → `verify-image.mjs` 5 项检查
+- 支持 `DEEPSEEK_API_KEY` secret 注入（有则跑完整 WS 派任务，无则仅 health 200）
+- 超时从 45min 提到 60min
+
+### A5 Xvfb 在环集成测试 CI job ✅
+- 新增 `tests/host/desktop-bus-xvfb.test.ts`：真实 wmctrl/xdotool/xclip 在环测试
+  覆盖 window.list / screen.size / active / clipboard / type / key / mouse / 事件轮询 / 坐标无效
+- 无 DISPLAY 时自动跳过（`describe.skipIf`）— 本机单测不受影响
+- CI 新增 `xvfb-integration` job：`xvfb-run` + openbox + xterm 真实驱动 DesktopBus
+- 真机怪癖直接暴露在断言里：rc=1 正常态、十六进制窗口 id、空剪贴板
+
+### 红灯实测 ✅（3/3）
+- ① 工具工厂：改坏 `HOST_TOOL_NAMES` 中的 `create_tool` → `create_tool_broken`
+  → `host-verify.mjs` 红灯（28/29 注册，exit 1）→ 还原 29/29 全绿
+- ② mkosi 段落错位（第二会话补做）：`PostInstallationScripts` 挪到 `[Execution]` 段
+  → summary 显示 `Postinstall Scripts: none` → build-image.sh 断言抓住（实测绿→红→绿）
+- ③ 删 allow 条目（第二会话补做）：删除 `vision_analyze` 的 allow 规则
+  → `permission-tool-reconciliation.test.ts` 红灯（uncovered）→ 还原后绿
+- 另：CI 侧两处必红缺陷在首跑前修掉（17890 未做 hostfwd、串口令牌提取缺
+  journal+console 双写）——防「红灯但红错了地方」
+
+### 阶段 A 门禁结果
+- `npx tsc --noEmit`：0 错误 ✅
+- `npx vitest run`：46 文件 / 868 用例（867 passed + 1 skipped office-docs timeout 预先存在）+ 11 Xvfb skipped ✅
+- `npm run host:build`：29/29 工具注册成功 ✅
+- 红灯实测：防线有效 ✅
+
+
+
+---
+
+## 4.5 第二会话（2026-10-07 下午）— 阶段 B1/C1-C4 代码侧落地（PLAN-100 执行）
+
+> 配套文档：`docs/ximo-os/PLAN-100.md`（100% 评分卡 + 七工作包）。
+> 本会话完成 WP-0（红灯 3/3）+ WP-1 代码侧 + WP-2 全部；CI 首跑待 push 后观察。
+
+### C1-C2 权限可观测 ✅
+- **权限矩阵自检**（铁门槛⑥）：`task-runner.logPermissionMatrix()` 每次任务打印
+  「工具×决策」矩阵，无规则工具 `⚠无规则` 告警（console → journal 可见）
+- **defaultDecisionOverride**：`ChatRequest` 新增可选字段；主机显式注入 `'deny'`
+  （无人值守语义：未命中清单=拒绝，而非静默回退 ask）。主应用不设置 → 行为不变
+- **tool-inventory 抽取**：`HOST_TOOL_GROUPS/HOST_TOOL_NAMES` 移至
+  `src/host/agent/tool-inventory.ts`（纯数据零副作用），task-runner re-export 保持兼容
+- **三方对账测试** `tests/functional/permission-tool-reconciliation.test.ts`：
+  ① allow/ask 规则引用的工具必须存在（deny 豁免=防护性预埋）② 主机清单每个工具
+  在 coding 配置都有显式规则 ③ 组名非空去重。**删 allow 条目 → 红灯已实测**
+- **补齐静默回退**：CODING/OFFICE allow 增 `code_review`（只读分析）、
+  `skill_record`/`agent_expert`（自有数据目录）— 此前静默 ask/回退
+
+### C3 协议加固 ✅
+- `DESKTOP_ACTIONS` 单一来源翻转：`as const` 数组在前，`DesktopAction` 类型从数组
+  派生 — 「union 加了动作忘加数组 → 运行时拒绝合法动作」在结构上不可能再发生
+- 未知 desktop action 不再断连：protocol.ts 放行到 bus.dispatch default 分支，
+  server 转 `desktop.reply(ok:false)`（动作级失败，连接保持）
+- `hello` 新增 `actions` 能力列表；HostClient 保存 `supportedActions`，
+  desktopRequest 对不支持动作**本地快速失败**（不等 10s 超时/断连）
+
+### C4 shim 严格模式 + 明文防护 ✅
+- `electron-shim` 默认严格模式（`XIMO_SHIM_STRICT=0` 回退）：未覆盖顶层 API 抛错
+  而非 no-op 假成功；symbol/then/catch/finally 语言探测不拦截（保证 await 可用）；
+  `BrowserWindow.getFocusedWindow` 补齐（WebviewBridge 调用点，返回 null）
+- `store.saveSettings`：主机运行时（入口设 `XIMO_HOST_RUNTIME=1`）敏感字段脱敏
+  落盘（secure.enc 同样跳过 → 双文件均无明文）；内存值保留，provider 解析不受影响
+
+### B1 镜像桌面栈（代码侧，CI 待验证）✅
+- `mkosi.conf` Packages += `xvfb,openbox,xdotool,wmctrl,xclip,ffmpeg,imagemagick`
+  （本地 `mkosi summary` 实测解析正确）
+- 新增 `xvfb@.service`（Xvfb :99，User=ximo-host，Restart=always）+
+  `ximo-wm.service`（openbox，Requires=xvfb@99）；`agent-hostd.service` 加
+  `Wants/After` + `XIMO_HOST_DISPLAY=:99` + **journal+console 双写**（串口取令牌用）
+- `build-image.sh` 覆盖树补拷两个单元；健康检查新增 `desktop:{enabled,display}`
+- `verify-image.mjs`：`--require-desktop` 硬断言（CI 用）+ 第 [6] 项
+  「desktop.window.list 在环」任务验收（铁门槛①的 CI 形态）
+- **CI 首跑前修掉两处必红**：QEMU 补 17890 hostfwd（原来只转发 SSH 却探测 17890）；
+  mkosi 断言字段名按实测输出修正（`Postinstall Scripts:`）
+
+### 第二会话验证基线
+- typecheck 0 错误；vitest 47 文件 / 871 用例全绿（新增对账 3 例）
+- `host:build` → host-verify 29/29；mkosi summary 断言绿→红→绿实测通过
 
 **后续追加修复（2026-10-06 晚，debugfs 读镜像后发现 postinstall 未生效）**：
 镜像虽能引导但缺 `ximo-host` 系统用户 → 顺线索排查出 4 层连环问题：
@@ -167,20 +272,20 @@ health 200 / WS 派任务 completed / 审批路径。
 
 ## 6. 未完成工作（优先级）
 
+- **阶段 B：镜像与桌面汇合**（下一阶段）
+  - B1：mkosi.conf Packages 追加 xvfb/openbox/xdotool/wmctrl/xclip/ffmpeg/imagemagick
+  - B2：镜像级桌面冒烟（CI 引导后派纯 API 桌面任务）
+  - B3：SSH 密钥注入自动化（可选）
+- **阶段 C：权限与协议可观测**（可与 B 并行）
+  - C1：权限矩阵自检 + 默认决策场景化
+  - C2：三方对账测试 + 死规则清理
+  - C3：协议加固（DESKTOP_ACTIONS satisfies 穷举、未知 action 降级）
+  - C4：electron-shim 严格模式 + safeStorage 明文防护
 - **P0-1**：镜像工件已产出（§5）→ 只剩 QEMU 引导的 5 项验收清单
-- **P1-1 阶段 2 剩余**：文档/浏览器两个 app 的语义化 JSON API（**主机侧无 pip、
-  无 soffice/pandoc/文档库**，需先定技术路径：随镜像打包 pip+python-docx/openpyxl，
-  或改用 LibreOffice headless）；浏览器侧主机无 playwright 浏览器
-- **已完成**：主机工具域已含 vision（截图→视觉分析闭环真机打通）与 code_quality/
-  code_review（主机默认 coding 模式此前缺代码智能）；分辨率已跟随（screen.ts 查
-  真实几何，变化即重启 ffmpeg）
-- **P1-3 人工接管**（先问用户）：cockpit 键鼠 → `input.*` 消息 → 镜像内注入
-- **P2-1 阶段 3**：btrfs 快照回滚、eBPF 审计、按任务用户沙箱、并发隔离（当前 runner
-  chdir/写白名单是进程级全局，只能串行）
-- **聊天区路由**（产品决策）：让聊天任务可选派发到 ximo-OS——注意涉及真实文件的任务
-  必须留本地（主机沙箱碰不到 Windows 文件系统）
-- **技术债**：`tests/main/tools/office-docs-e2e.test.ts` 依赖真实 officecli 偶发失败；
-  `scripts/test-vd*.ps1` 为前人遗留去留自定
+- **P1-1 阶段 2 剩余**：文档/浏览器两个 app 的语义化 JSON API
+- **阶段 D**：主航道能力（A+B+C 完成后按序执行）
+- **技术债**：`tests/main/tools/office-docs-e2e.test.ts` 依赖真实 officecli 偶发失败
+  （`create 创建 pptx` 超时 5000ms — 预先存在，与阶段 A 无关）
 
 ## 7. 关键决策记录（勿轻易推翻）
 
@@ -204,11 +309,25 @@ health 200 / WS 派任务 completed / 审批路径。
 
 ```bash
 npm run typecheck        # 0 错误
-npx vitest run           # 46 文件 / 856+ 用例全绿
-npm run host:build       # 改 src/host 或依赖后必跑
+npx vitest run           # 47 文件 / 868+ 用例全绿（+ 11 Xvfb skipped 无 DISPLAY）
+npm run host:build       # 改 src/host 或依赖后必跑（含 host-verify 工具清点）
+# Xvfb 集成测试（仅 CI 或 Linux 有 X 时）：
+npx vitest run tests/host/desktop-bus-xvfb.test.ts
 # 主机重新部署（改 host 运行时后）：
 npm run host:build
 MSYS_NO_PATHCONV=1 wsl -d Debian -- bash -c "XIMO_REPO=/mnt/e/ximo2/ximo-Agent bash /mnt/e/ximo2/ximo-Agent/src/host/deploy/install.sh"
 MSYS_NO_PATHCONV=1 schtasks /end /tn ximo-hostd; MSYS_NO_PATHCONV=1 schtasks /run /tn ximo-hostd
 # 冒烟：health 应返回 version:1；WS 派任务应 completed
 ```
+
+## 9. 阶段 A 新增防线清单
+
+| 防线 | 防什么 | 位置 |
+|------|--------|------|
+| eslint `no-restricted-syntax` | host 构建路径使用 `import.meta.url`（esbuild CJS 降级为 `{}`） | `.eslintrc.cjs` |
+| `host-verify.mjs` 工具清点 | 工具工厂名拼写错误 / 模块组加载失败 / lazy-registry 吞错 | `scripts/host-verify.mjs` + `package.json` host:build 尾部 |
+| `runCmd` 三类错误分类 | 正常空态（rc=1）被误判为真故障 → 后续操作全快速失败 | `src/host/desktop/bus.ts:298-324` |
+| `coord()` 严格校验 | 非数字坐标静默归零 → 误点击 (0,0) | `src/host/desktop/bus.ts:287-296` |
+| `mkosi summary` 构建前断言 | PostInstallationScripts 放错段被静默忽略 | `os/scripts/build-image.sh:42-49` |
+| CI 冒烟移除 `continue-on-error` | 镜像引导失败被 CI 绿灯掩盖 | `.github/workflows/ximo-os-image.yml` |
+| Xvfb 集成测试 CI job | desktop-bus 真机怪癖（rc=1 / 十六进制 id / 空剪贴板）回归 | `tests/host/desktop-bus-xvfb.test.ts` + CI `xvfb-integration` job |
