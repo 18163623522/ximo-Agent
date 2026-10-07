@@ -200,10 +200,11 @@ describe.skipIf(skip)('desktop-bus Xvfb 集成测试 — 真实 X 工具在环',
   })
 
   itXvfb('事件轮询 — 窗口集合变化时推送事件', async () => {
-    // 建立基线
-    await bus.checkEvents()
+    // ⚠ 顺序敏感：checkEvents 在无订阅者时直接返回（不会建立基线）。
+    // 必须先订阅再建立基线，否则第一拍把窗口出现当「初始化」吞掉 → 永远 0 事件
     const events: unknown[] = []
     const off = bus.onEvent((e) => events.push(e))
+    await bus.checkEvents() // 真实基线：当前窗口集合（changed=false，不推送）
 
     try {
       const child = spawn('xterm', ['-title', 'XVFB_EVENT_TEST', '-e', 'sleep 60'], {
