@@ -46,37 +46,12 @@ jobs:
           sudo chmod +x /usr/local/bin/mkosi
           /usr/local/bin/mkosi --version
 
-      - name: 构建 ximo-OS 0.1 磁盘镜像
+      - name: 构建 ximo-OS 0.1 磁盘镜像（含 CI apiKey 注入）
         # root 运行 — Ubuntu 24.04 AppArmor 限制非特权 userns，mkosi 无根构建
         # 会报 Operation not permitted / uid 65436 映射失败；root 直建绕过
-        run: sudo -E bash os/scripts/build-image.sh
-
-      - name: 注入 CI apiKey（如有 secret）
-        # 注意：secrets 上下文不能用于步骤级 if（workflow 启动即报错），
-        # 改在 run 块内经 env 判断
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          if [ -z "$DEEPSEEK_API_KEY" ]; then
-            echo "⚠ 未配置 DEEPSEEK_API_KEY secret — 跳过注入（冒烟降级为 health-only）"
-            exit 0
-          fi
-          # 在覆盖树中预置 config.json（含 CI apiKey）
-          # firstboot.sh 的 [ ! -f config.json ] 判断会跳过创建 → 直接用注入的版本
-          mkdir -p os/mkosi/artifacts/image-overlay/opt/ximo-host/config
-          cat > os/mkosi/artifacts/image-overlay/opt/ximo-host/config/config.json <<EOF
-          {
-            "listen": "0.0.0.0:17890",
-            "baseUrl": "https://api.deepseek.com/v1",
-            "apiKey": "$DEEPSEEK_API_KEY",
-            "model": "deepseek-chat",
-            "mode": "coding",
-            "display": ":99"
-          }
-          EOF
-          chmod 600 os/mkosi/artifacts/image-overlay/opt/ximo-host/config/config.json
-          # 重建镜像以包含注入的 apiKey
-          cd os/mkosi && sudo -E mkosi build
+        run: sudo -E bash os/scripts/build-image.sh
 
       - name: 引导冒烟（QEMU TCG — 移除 continue-on-error，红灯即 CI 红）
         env:
