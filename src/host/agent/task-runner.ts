@@ -14,7 +14,9 @@
 import '../electron-shim'
 import { agentLoop } from '../../main/deepseek/agent-loop'
 import { ensureModuleGroupsLoaded } from '../../main/tools/lazy-registry'
+export { ensureModuleGroupsLoaded }
 import { toolRegistry } from '../../main/tools/ToolRegistry'
+export { toolRegistry }
 import { setAllowedWriteRoots } from '../../main/security-guard'
 import { loadSettings, saveSettings } from '../../main/store'
 import { DesktopBusTool } from '../tools/desktop-tool'
@@ -75,6 +77,8 @@ const HOST_TOOL_NAMES = [
   // code_review — 代码审查
   'code_review',
 ]
+
+export { HOST_TOOL_NAMES }
 
 const ORIGINAL_CWD = process.cwd()
 

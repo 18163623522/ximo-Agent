@@ -21,8 +21,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "host:build": "node scripts/host-build.mjs",
+    "host:build": "node scripts/host-build.mjs && node scripts/host-verify.mjs",
     "host:start": "node dist-host/agent-hostd.cjs",
+    "host:verify": "node scripts/host-verify.mjs",
     "verify:image": "node os/scripts/verify-image.mjs"
   },
   "dependencies": {

@@ -17,10 +17,12 @@ import { fileURLToPath } from 'url'
  * 运行时检测可用的来源，两者取其一。
  */
 export function rrwebBundlePath(): string {
-  // CJS 路径（host 产物）— __dirname 由 esbuild 注入
-  // 用 globalThis 访问绕过 TS 静态类型推导（@types/node 声明 __dirname 为 string）
-  if (typeof (globalThis as Record<string, unknown>).__dirname === 'string') {
-    return join((globalThis as { __dirname: string }).__dirname, '../../../node_modules/rrweb/dist/rrweb.umd.cjs')
+  // CJS 路径（host 产物）— esbuild 在 CJS 模式下注入 __dirname。
+  // typeof 对未声明变量安全（返回 'undefined'），不会抛 ReferenceError。
+  // @ts-ignore __dirname 在 ESM 模式下不存在，TS 在 module:ESNext 下可能报错
+  if (typeof __dirname === 'string') {
+    // @ts-ignore 同上
+    return join(__dirname, '../../../node_modules/rrweb/dist/rrweb.umd.cjs')
   }
   // ESM 路径（Electron 主应用）
   // eslint-disable-next-line no-restricted-syntax
