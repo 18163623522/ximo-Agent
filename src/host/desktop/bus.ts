@@ -109,7 +109,14 @@ export class DesktopBus {
       case 'active': {
         // xdotool getactivewindow 输出**十进制**，而 wmctrl 输出十六进制（0x…）
         // → 必须先归一化为十六进制再比对，否则永远匹配不到（历史 bug）
-        const raw = (await this.runCmd(CMD.activeId())).trim()
+        // getactivewindow 无聚焦窗口时返回 rc=1 — 正常空态，不归因为会话不可用
+        let raw: string
+        try {
+          raw = (await this.runCmd(CMD.activeId())).trim()
+        } catch {
+          // rc=1 正常空态（无聚焦窗口）
+          return null
+        }
         const id = normalizeWindowId(raw)
         if (!id) return null
         const windows = await this.listWindows()
@@ -137,12 +144,13 @@ export class DesktopBus {
       case 'clipboard.read': {
         // 读剪贴板 — 读取 GUI 应用内容的最快通路（比截图准且无需视觉模型）。
         // 注意：剪贴板为空时 xclip 以非 0 退出并报 "target STRING not available"，
-        // 这是正常空态而非故障。此处直接调底层 run，绕开 runCmd 的失败归因缓存
-        // （否则一次空读会把 unavailableReason 置位，导致后续操作全部快速失败）。
+        // 这是正常空态而非故障。runCmd 对非零退出码不置位 unavailableReason，
+        // 所以这里可以直接用 runCmd — 一次空读不会导致后续操作快速失败。
         try {
           const { cmd, args } = CMD.clipboardRead()
-          return { text: await this.run(cmd, args) }
+          return { text: await this.runCmd({ cmd, args }) }
         } catch {
+          // 正常空态（剪贴板无内容）
           return { text: '' }
         }
       }
@@ -275,25 +283,40 @@ export class DesktopBus {
     return v
   }
 
-  /** 坐标强转 — 非数字退到 0（xdotool 不接受非数字） */
+  /** 坐标强转 — 非数字 / null / undefined 抛参数错误（不归零，避免误点击 (0,0)） */
   private coord(v: unknown): number {
+    if (v === null || v === undefined || typeof v === 'boolean') {
+      throw new Error(`坐标参数无效：期望数字，收到 ${JSON.stringify(v)}`)
+    }
     const n = Number(v)
-    return Number.isFinite(n) ? Math.round(n) : 0
+    if (!Number.isFinite(n)) {
+      throw new Error(`坐标参数无效：期望数字，收到 ${JSON.stringify(v)}`)
+    }
+    return Math.round(n)
   }
 
   private async runCmd({ cmd, args }: { cmd: string; args: string[] }, stdin?: string): Promise<string> {
     try {
       const out = await this.run(cmd, args, undefined, stdin)
-      this.unavailableReason = null
+      this.unavailableReason = null // 成功即清缓存 — 会话恢复后自动自愈（事件轮询每 2s 重探）
       return out
     } catch (e) {
-      // 统一归因 — ENOENT = X 工具缺失；其余视为会话不可用
-      const msg = (e as Error).message ?? String(e)
-      if (msg.includes('ENOENT')) {
+      // 错误形状必须与真实 execFile 一致：非零退出时 code 是**数字**退出码，
+      // status 字段不存在（实测 Node v24）。模拟错误时不得虚构 status。
+      const err = e as Error & { code?: string | number; killed?: boolean }
+      const msg = err.message ?? String(e)
+      // ENOENT = X 工具缺失 → 真故障，置位（安装工具后下一次成功调用自动恢复）
+      if (err.code === 'ENOENT') {
         this.unavailableReason = `X 工具未安装（需要 xdotool/wmctrl）：${cmd}`
-      } else if (!this.unavailableReason) {
-        this.unavailableReason = `桌面会话不可用（DISPLAY=${this.deps.display}）：${msg.slice(0, 200)}`
+        throw new Error(this.unavailableReason)
       }
+      // 非零退出码（数字 code）— 多为正常空态（getactivewindow 无聚焦、xclip 空读、
+      // ls 目录不存在）→ 不置位，让调用方按返回值/异常各自处理
+      if (typeof err.code === 'number' && err.code > 0) {
+        throw new Error(`${cmd} 退出码 ${err.code}：${msg.slice(0, 200)}`)
+      }
+      // 其余（timeout 杀进程 / 信号终止 / 未知）→ 视为会话不可用，置位
+      this.unavailableReason ??= `桌面会话不可用（DISPLAY=${this.deps.display}）：${msg.slice(0, 200)}`
       throw new Error(this.unavailableReason)
     }
   }

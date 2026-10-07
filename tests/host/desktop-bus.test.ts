@@ -151,7 +151,11 @@ describe('desktop-bus — 路由与解析', () => {
   it('X 工具缺失（ENOENT）— 归因可读', async () => {
     const bus = new DesktopBus({
       display: ':99',
-      run: async () => { throw new Error("spawn wmctrl ENOENT: file not found") },
+      run: async () => {
+        const e = new Error('spawn wmctrl ENOENT: file not found') as Error & { code?: string }
+        e.code = 'ENOENT'
+        throw e
+      },
     })
     await expect(bus.dispatch('window.list')).rejects.toThrow('X 工具未安装')
   })
@@ -175,6 +179,38 @@ describe('desktop-bus — 路由与解析', () => {
     expect(active?.id).toBe('0x0180000c')
   })
 
+  it('active 无聚焦窗口 — rc=1 正常空态不置失败归因，后续操作不受影响', async () => {
+    let activeFail = true
+    const run: RunFn = async (cmd, args) => {
+      if (cmd === 'xdotool' && args[0] === 'getactivewindow') {
+        if (activeFail) {
+          // getactivewindow 无聚焦窗口时返回 rc=1 — 正常空态。
+          // 错误形状必须与真实 execFile 一致：code 是**数字**退出码，status 字段不存在
+          const e = new Error('xdotool getactivewindow returned 1') as Error & { code?: string | number }
+          e.code = 1
+          throw e
+        }
+        return '25165836\n'
+      }
+      if (cmd === 'wmctrl') return '0x0180000c  0 4642 host 0 0 100 100 Win\n'
+      return ''
+    }
+    const bus = new DesktopBus({ display: ':99', run, appName: () => 'app' })
+
+    // 无聚焦窗口 → null（不报错）
+    expect(await bus.dispatch('active')).toBeNull()
+
+    // 关键：正常空态不置 unavailableReason → 后续 window.list 照常可用
+    const windows = await bus.dispatch('window.list') as { id: string }[]
+    expect(windows).toHaveLength(1)
+
+    // 恢复聚焦后 → 正常返回窗口
+    activeFail = false
+    const active = await bus.dispatch('active') as { id: string } | null
+    expect(active).not.toBeNull()
+    expect(active?.id).toBe('0x0180000c')
+  })
+
   it('window.op 接受十进制 window_id（归一化后定位）', async () => {
     const f = fakeRun()
     const bus = new DesktopBus(fakeDeps(f.run))
@@ -190,8 +226,18 @@ describe('desktop-bus — 路由与解析', () => {
     expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '120', '80', 'click', '3'] })
     await bus.dispatch('mouse.scroll', { x: 10, y: 20, direction: 'up', amount: 3 })
     expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '10', '20', 'click', '--repeat', '3', '4'] })
-    await bus.dispatch('mouse.move', { x: 55.7, y: 'abc' })
-    expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '56', '0'] }) // 强转取整；NaN → 0
+    await bus.dispatch('mouse.move', { x: 55.7, y: 30 })
+    expect(f.calls.at(-1)).toEqual({ cmd: 'xdotool', args: ['mousemove', '56', '30'] }) // 55.7 取整为 56
+  })
+
+  it('坐标参数无效 — 非数字坐标抛错且不点击 (0,0)', async () => {
+    const f = fakeRun()
+    const bus = new DesktopBus(fakeDeps(f.run))
+    // 非数字坐标必须抛错，而不是静默归零点击 (0,0)
+    await expect(bus.dispatch('mouse.click', { x: 'abc', y: 80 })).rejects.toThrow('坐标参数无效')
+    await expect(bus.dispatch('mouse.move', { x: 55, y: null })).rejects.toThrow('坐标参数无效')
+    // 确保没有发出任何 xdotool 命令（不点击）
+    expect(f.calls.filter((c) => c.cmd === 'xdotool')).toHaveLength(0)
   })
 
   it('screen.size — 解析 getdisplaygeometry 输出', async () => {
@@ -207,7 +253,13 @@ describe('desktop-bus — 路由与解析', () => {
     let clipEmpty = true
     const run: RunFn = async (cmd, args) => {
       if (cmd === 'xclip' && args.includes('-o')) {
-        if (clipEmpty) throw new Error('Error: target STRING not available')
+        // xclip 空读以非零退出码报错 — 正常空态。
+        // 错误形状与真实 execFile 一致：code 是**数字**退出码，status 字段不存在
+        if (clipEmpty) {
+          const e = new Error('Error: target STRING not available') as Error & { code?: string | number }
+          e.code = 1
+          throw e
+        }
         return '有内容'
       }
       if (cmd === 'wmctrl') return '0x0180000c  0 4642 host 0 0 100 100 Win\n'
