@@ -95,6 +95,10 @@ jobs:
           if [ -n "$DEEPSEEK_API_KEY" ]; then
             node "$GITHUB_WORKSPACE/os/scripts/verify-image.mjs" --token "$TOKEN" --port 17890 --ssh-port 12222 --require-desktop
             VRC=$?
+            if [ "$VRC" != "0" ]; then
+              echo "---- verify-image 未全过，倾倒 guest 控制台尾部（agent-hostd 日志）----"
+              sudo tail -60 /tmp/guest-console.log || true
+            fi
           else
             echo "⚠ 无 DEEPSEEK_API_KEY secret — 跳过 WS 派任务（health 200 已通过）"
             VRC=0
