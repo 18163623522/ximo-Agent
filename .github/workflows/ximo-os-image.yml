@@ -95,7 +95,8 @@ jobs:
           # （agent-hostd 首启回显经 journal+console → hvc0 → mkosi stdout）
           TOKEN=""
           for i in $(seq 1 120); do
-            TOKEN="$(grep -oP 'token = \K.+' /tmp/guest-console.log 2>/dev/null | head -1)" || true
+            TOKEN="$(grep -oP 'token = \K.+' /tmp/guest-console.log 2>/dev/null | head -1 | tr -d '
+')" || true
             [ -n "$TOKEN" ] && break
             sleep 4
           done
