@@ -41,6 +41,22 @@ chmod 755 "$OVERLAY/usr/local/sbin/ximo-os-firstboot.sh"
 # 相对软链 = systemctl enable 的等价物（不依赖 mkosi 脚本时序）
 ln -sfn ../agent-hostd.service "$OVERLAY/etc/systemd/system/multi-user.target.wants/agent-hostd.service"
 ln -sfn ../ximo-os-firstboot.service "$OVERLAY/etc/systemd/system/multi-user.target.wants/ximo-os-firstboot.service"
+# CI 注入 apiKey（构建前写入 overlay — mkosi 会缓存树，构建后追加 overlay 不生效）
+if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
+  mkdir -p "$OVERLAY/opt/ximo-host/config"
+  cat > "$OVERLAY/opt/ximo-host/config/config.json" <<EOF
+{
+  "listen": "0.0.0.0:17890",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "apiKey": "$DEEPSEEK_API_KEY",
+  "model": "deepseek-chat",
+  "mode": "coding",
+  "display": ":99"
+}
+EOF
+  chmod 600 "$OVERLAY/opt/ximo-host/config/config.json"
+  echo "  ✓ 已注入 CI apiKey 到镜像配置（firstboot 检测到已存在则跳过占位）"
+fi
 
 echo "[3/5] mkosi summary — 断言配置解析非空（防静默忽略）"
 cd "$REPO_ROOT/os/mkosi"
