@@ -201,6 +201,38 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 - **CI 首跑前修掉两处必红**：QEMU 补 17890 hostfwd（原来只转发 SSH 却探测 17890）；
   mkosi 断言字段名按实测输出修正（`Postinstall Scripts:`）
 
+### CI 首跑真实通过（2026-10-07，run 37595668387 @ a05b1eb）✅✅
+- **这是项目第一次真实引导验证**——此前所有「冒烟通过」均为假绿（见下）
+- 六道验收全绿：令牌提取 → /api/health 200 → WS 派任务 completed（2 次工具）→
+  审批路径 approval.request → **桌面工具在环（desktop.window.list 成功）**
+- **铁门槛① 达成**（镜像内纯 API 桌面任务 E2E）＋ **铁门槛② 红灯 3/3**
+- xvfb-integration job 绿（真实 xdotool/wmctrl/xclip 在环，含剪贴板/事件轮询）
+- 假绿揭穿（复盘预言应验）：mkosi 25.3 无 `--qemu-args`，qemu 报 invalid option
+  即退出，探测循环超时后曾被 continue-on-error 洗绿——**10-06 的「冒烟通过」从未
+  真正引导过镜像**
+
+### CI 十一轮排障清单（每条都经真实日志确证，勿重蹈）
+1. workflow 启动 0s 失败：`secrets` 上下文不能用于步骤级 if → 移入 run 块经 env 判断
+2. mkosi qemu 必须与构建同样 sudo（AppArmor 限非特权 userns，unshare 被拒）
+3. mkosi 25.3 传 qemu 参数：mkosi.conf `[Runtime]` `QemuArgs=`（CLI `--qemu-args` 不存在）
+4. 端口探测是假阳性：hostfwd 宿主端口在 qemu 启动瞬间即被 slirp accept →
+   就绪信号改为「令牌出现在 guest 控制台」
+5. 令牌捕获带尾随 CR（33=32+1）污染 Authorization 头 → health 400 → `tr -d '
+'`
+6. `cd os/mkosi` 后脚本相对路径失效 → `$GITHUB_WORKSPACE` 绝对路径
+7. apiKey 构建后追加 overlay 不生效（mkosi 缓存树）→ 注入移到 build-image.sh 构建前
+8. guest DNS 不通（fetch failed）：mkosi 拷入构建机 resolv.conf（127.0.0.53）→
+   装 systemd-resolved + postinstall 启用并指 stub，上游由 DHCP 提供
+9. TCG 下 guest TLS/计算慢一个量级 → 验收任务超时 120s→300s
+10. 推送降级链实战：git 直连多次中断 → **gh api Contents API 写文件**（稳定）→
+    网络恢复后 `git fetch` + `git rebase` 自动丢弃内容相同的本地重复补丁
+
+### 铁门槛进度（PLAN-100）
+- ① 镜像纯 API 桌面任务 E2E ✅（CI [6] 项）
+- ② 红灯能力实测 3/3 ✅（工具工厂 / mkosi 段落 / 删 allow）
+- ③ 快照回滚 / ④ 浏览器零截图 / ⑤ 并发隔离 / ⑥ 权限矩阵自证 ⏳ 阶段 D
+- 适配度自评：~82%（评分卡：大脑100 手眼85 桌面75 OS层70 驾驶舱90 安全55）
+
 ### 第二会话验证基线
 - typecheck 0 错误；vitest 47 文件 / 871 用例全绿（新增对账 3 例）
 - `host:build` → host-verify 29/29；mkosi summary 断言绿→红→绿实测通过
