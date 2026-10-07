@@ -118,7 +118,7 @@ jobs:
           # 接入 verify-image.mjs 的完整验收（health/令牌/派任务/审批/桌面在环）
           # 无 DEEPSEEK_API_KEY secret 时任务会失败 — 那时仅 health 通过即冒烟绿
           if [ -n "$DEEPSEEK_API_KEY" ]; then
-            node os/scripts/verify-image.mjs --token "$TOKEN" --port 17890 --ssh-port 12222 --require-desktop
+            node "$GITHUB_WORKSPACE/os/scripts/verify-image.mjs" --token "$TOKEN" --port 17890 --ssh-port 12222 --require-desktop
             VRC=$?
           else
             echo "⚠ 无 DEEPSEEK_API_KEY secret — 跳过 WS 派任务（health 200 已通过）"
