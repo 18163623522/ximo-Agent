@@ -78,7 +78,8 @@ async function checkHealth(token, { requireDesktop = false } = {}) {
 }
 
 /** 派任务并等终态；onChunk 可观察 approval.request */
-function dispatch(token, id, task, { approveIfAsked = false, timeoutMs = 120_000 } = {}) {
+function dispatch(token, id, task, { approveIfAsked = false, timeoutMs = 300_000 } = {}) {
+  // 300s：TCG 纯软件模拟下 guest 内 TLS/计算比 KVM 慢一个量级（CI 实测 120s 会假超时）
   return new Promise((resolve) => {
     const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws?token=${token}`)
     let asked = false
