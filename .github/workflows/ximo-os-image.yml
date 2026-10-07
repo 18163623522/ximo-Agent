@@ -90,33 +90,19 @@ jobs:
           # 必须与构建同样 sudo：AppArmor 限制非特权 userns，mkosi 的沙箱 unshare 会被拒
           sudo -E mkosi qemu > /tmp/guest-console.log 2>&1 &
           QPID=$!
-          # 等 cockpit-link 端口就绪（比 SSH 更说明 agent-hostd 已启动）；TCG 引导 2-5 分钟
-          for i in $(seq 1 150); do
-            if timeout 2 bash -c '</dev/tcp/127.0.0.1/17890' 2>/dev/null; then
-              echo "✅ cockpit-link 端口就绪 — agent-hostd 已启动"
-              break
-            fi
-            sleep 3
+          # ⚠ 不能用端口探测判断就绪：hostfwd 的宿主端口在 qemu 启动瞬间就被
+          # slirp 接受（假阳性）。可靠信号 = 令牌出现在 guest 控制台
+          # （agent-hostd 首启回显经 journal+console → hvc0 → mkosi stdout）
+          TOKEN=""
+          for i in $(seq 1 120); do
+            TOKEN="$(grep -oP 'token = \K.+' /tmp/guest-console.log 2>/dev/null | head -1)" || true
+            [ -n "$TOKEN" ] && break
+            sleep 4
           done
-          # 再等几秒让 agent-hostd 打印令牌
-          sleep 5
-          if ! timeout 2 bash -c '</dev/tcp/127.0.0.1/17890' 2>/dev/null; then
-            echo "❌ 450s 内未探测到 cockpit-link 端口 — 诊断信息："
-            if timeout 2 bash -c '</dev/tcp/127.0.0.1/12222' 2>/dev/null; then
-              echo "  - SSH(12222) 通 → 系统已引导，agent-hostd 未监听（查串口日志尾部的服务报错）"
-            else
-              echo "  - SSH(12222) 也不通 → 系统未完成引导（查串口日志的内核/紧急模式输出）"
-            fi
+          if [ -z "$TOKEN" ]; then
+            echo "❌ 480s 内 guest 控制台未出现令牌 — 诊断信息："
             echo "  --- guest 控制台尾部 ---"
             sudo tail -80 /tmp/guest-console.log || echo "  （控制台日志为空/不存在）"
-            sudo pkill -f qemu-system-x86_64 || true
-            exit 1
-          fi
-          # 从 guest 控制台提取令牌（agent-hostd 首启回显经 journal+console）
-          TOKEN="$(grep -oP 'token = \K.+' /tmp/guest-console.log | head -1)" || true
-          if [ -z "$TOKEN" ]; then
-            echo "❌ 未能从 guest 控制台提取令牌"
-            sudo tail -50 /tmp/guest-console.log
             sudo pkill -f qemu-system-x86_64 || true
             exit 1
           fi
