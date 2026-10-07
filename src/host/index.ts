@@ -15,21 +15,30 @@ import { ensureModuleGroupsLoaded, HOST_TOOL_GROUPS, HOST_TOOL_NAMES, toolRegist
 async function verifyMode(): Promise<void> {
   console.log('[host-verify] 开始工具清点…')
   console.log(`[host-verify] HOST_TOOL_GROUPS: ${HOST_TOOL_GROUPS.join(', ')}`)
-  console.log(`[host-verify] 预期工具数: ${HOST_TOOL_NAMES.length}`)
+  console.log(`[host-verify] 预期工具数: ${HOST_TOOL_NAMES.length}（静态）+ 运行时工具`)
 
   try {
     // 逐个加载，便于定位失败的模块组
     for (const g of HOST_TOOL_GROUPS) {
       await ensureModuleGroupsLoaded([g])
     }
+    // 运行时工具（office_docs 恒注册；browser 按 env）— 与 task-runner 同源注册，
+    // 否则清点口径与实际运行不一致（漏报运行时工具缺失）
+    const { OfficeDocsTool } = await import('./tools/office-docs-tool')
+    toolRegistry.register(new OfficeDocsTool())
+    if (process.env.XIMO_HOST_BROWSER === '1') {
+      const { BrowserTool } = await import('./tools/browser-tool')
+      toolRegistry.register(new BrowserTool())
+    }
   } catch (e) {
-    console.error(`[host-verify] ❌ 模块组加载失败: ${(e as Error).message}`)
+    console.error(`[host-verify] ❌ 工具装载失败: ${(e as Error).message}`)
     process.exit(1)
   }
 
   const registered = new Set<string>()
   // toolRegistry 没有遍历接口，用 getByNames 测试每个预期名
-  const expected = HOST_TOOL_NAMES
+  const expected = [...HOST_TOOL_NAMES, 'office_docs']
+  if (process.env.XIMO_HOST_BROWSER === '1') expected.push('browser')
   const missing: string[] = []
   for (const name of expected) {
     if (toolRegistry.has(name)) {
@@ -58,6 +67,8 @@ async function main(): Promise<void> {
   // 主机运行时标记 — store.saveSettings 依据它决定敏感字段是否脱敏落盘
   // （主机无真实 safeStorage，settings.json 不得保存明文 apiKey）
   process.env.XIMO_HOST_RUNTIME = '1'
+  // 清点口径与镜像一致（镜像 service 设 XIMO_HOST_BROWSER=1）
+  process.env.XIMO_HOST_BROWSER ??= '1'
 
   // 验证模式 — 不启动服务器，执行工具清点并退出
   if (process.env.XIMO_HOST_VERIFY === '1') {
