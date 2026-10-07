@@ -98,6 +98,14 @@
 3. **沙箱**：文件工具锁死任务工作区；`web_fetch` 复用主应用 SSRF 防护；终端命令经审批。
 4. **控制面唯一**：驾驶舱对主机的全部影响只经本协议；主机不出站连接驾驶舱。
 5. **版本偏斜降级**：未知 `t` → `error` 帧并断连（协议级错误）；**未知 desktop action → `desktop.reply(ok:false)`，连接保持**（动作级失败）。驾驶舱以 `hello.actions` 做本地预判，不发必败帧。
+6. **数据出站边界（须知晓）**：`desktop.screen.snapshot` / `browser.screenshot` 的画面
+   与 `vision_analyze` 读取的图片，会以 base64/文件路径形式**发送给配置的视觉模型端点**
+   （visionBaseUrl，默认第三方 `api.agnes-ai.cn`）——屏幕是最高敏感度数据面。需要
+   数据不出本机时：改用结构化 API（clipboard.read / window.list / browser.extract）或
+   将 visionBaseUrl 指向自建端点。此边界无强制拦截（工具语义即「读画面」），属部署方
+   责任，故在契约层显式声明。
+7. **工作区快照（运维面）**：`/api/workspace/snapshot|rollback` 为运维接口（Bearer），
+   不进 cockpit-link 的驾驶舱交互面——回滚是宿主/运维决策，不是 Agent 动作。
 
 ## 5. 驾驶舱对接点（现有 Electron App）
 

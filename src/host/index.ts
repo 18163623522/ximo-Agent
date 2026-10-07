@@ -10,7 +10,14 @@
  */
 import { loadConfig, ensureToken } from './config'
 import { createHostServer } from './server'
-import { ensureModuleGroupsLoaded, HOST_TOOL_GROUPS, HOST_TOOL_NAMES, toolRegistry } from './agent/task-runner'
+import { ensureModuleGroupsLoaded, HOST_TOOL_GROUPS, HOST_TOOL_NAMES, toolRegistry, buildPermissionMatrix } from './agent/task-runner'
+
+/** 权限矩阵自检（铁门槛⑥）— 供 scripts/host-perm-verify.mjs 消费（无副作用，可同步调用） */
+export function runPermissionCheck(): ReturnType<typeof buildPermissionMatrix> {
+  const tools = [...HOST_TOOL_NAMES, 'office_docs']
+  if (process.env.XIMO_HOST_BROWSER === '1') tools.push('browser')
+  return buildPermissionMatrix(tools, process.env.XIMO_HOST_MODE || 'coding')
+}
 
 async function verifyMode(): Promise<void> {
   console.log('[host-verify] 开始工具清点…')

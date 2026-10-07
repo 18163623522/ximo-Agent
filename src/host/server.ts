@@ -173,6 +173,13 @@ export function createHostServer(opts?: {
     })
   }
 
+/** 任务审计边界（阶段 D5）— best-effort 调 ximo-os-audit（镜像内有；宿主开发态静默跳过） */
+function auditBoundary(action: 'start' | 'stop', taskId: string, workspace?: string): void {
+  const script = process.env.XIMO_AUDIT_SCRIPT || '/usr/local/sbin/ximo-os-audit.sh'
+  if (!existsSync(script)) return
+  execFile(script, workspace ? [action, taskId, workspace] : [action, taskId], { timeout: 10_000 }, () => { /* best-effort */ })
+}
+
   function scheduleOrRun(exec: () => void): void {
     if (running < config.maxConcurrentTasks) {
       running++
@@ -189,6 +196,7 @@ export function createHostServer(opts?: {
     const { rec, controller } = entry
 
     const finish = (out: { status: 'completed' | 'failed' | 'cancelled'; result: string; error?: string }): void => {
+      auditBoundary('stop', id)
       rec.status = out.status
       rec.result = out.result
       rec.error = out.error
@@ -205,6 +213,7 @@ export function createHostServer(opts?: {
       rec.status = 'running'
       persist(rec)
       broadcast({ t: 'task.status', id, stage: 'running' })
+      auditBoundary('start', id, workspaceDir(id))
 
       let seq = 0
       const onEvent = (e: RunnerEvent): void => {

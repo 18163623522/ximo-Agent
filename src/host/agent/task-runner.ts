@@ -55,22 +55,36 @@ export interface TaskOutput {
 }
 
 /** 权限矩阵启动自检（铁门槛⑥）— 主机无人值守：未匹配清单的工具 = 显式拒绝 */
-function logPermissionMatrix(toolNames: string[], mode: string): void {
+/** 权限矩阵快照（纯函数，供自检脚本与启动日志共用）—
+ *  返回每工具的工具级决策与「是否有显式规则」（subject 级规则也算覆盖）。 */
+export function buildPermissionMatrix(toolNames: string[], mode: string): {
+  mode: string
+  total: number
+  rows: { name: string; decision: string; hasRule: boolean }[]
+  noRule: string[]
+} {
   const config = { ...getConfigForMode(mode), defaultDecision: 'deny' as const }
   const rules = [...config.allow, ...config.ask, ...config.deny]
-  const noRule: string[] = []
-  const lines = toolNames.map((name) => {
-    // 有无规则按工具名判定（subject 级规则如 office_docs read/replace 也算覆盖）；
-    // decision 是工具级（subject=undefined）评估结果 — subject 级覆盖的工具会显示 deny，
-    // 以实际调用时 extractSubject 的评估为准
-    const hasRule = rules.some((r) => r.tool === name)
-    if (!hasRule) noRule.push(name)
-    return `${evaluate(config, name, '').padEnd(5)} ${hasRule ? '' : '⚠无规则 '}${name}`
+  const rows = toolNames.map((name) => {
+    const mine = rules.filter((r) => r.tool === name)
+    const subjectOnly = mine.length > 0 && mine.every((r) => r.subject !== undefined)
+    // decision 是工具级（subject=''）评估 — subject 级规则覆盖的工具级显示为 deny/默认，
+    // 实显示「subject」标注以免误读为不可用（实际以调用时 extractSubject 的评估为准）
+    return {
+      name,
+      decision: subjectOnly ? 'subject' : evaluate(config, name, ''),
+      hasRule: mine.length > 0,
+    }
   })
+  return { mode, total: toolNames.length, rows, noRule: rows.filter((r) => !r.hasRule).map((r) => r.name) }
+}
+
+function logPermissionMatrix(toolNames: string[], mode: string): void {
+  const m = buildPermissionMatrix(toolNames, mode)
   console.log(`[task-runner] 权限矩阵（mode=${mode}，default=deny 显式注入）:`)
-  for (const l of lines) console.log(`[task-runner]   ${l}`)
-  if (noRule.length > 0) {
-    console.warn(`[task-runner] ⚠️ ${noRule.length} 个工具没有任何权限规则（一律按默认决策拒绝）: ${noRule.join(', ')}`)
+  for (const r of m.rows) console.log(`[task-runner]   ${r.decision.padEnd(5)} ${r.hasRule ? '' : '⚠无规则 '}${r.name}`)
+  if (m.noRule.length > 0) {
+    console.warn(`[task-runner] ⚠️ ${m.noRule.length} 个工具没有任何权限规则（一律按默认决策拒绝）: ${m.noRule.join(', ')}`)
   }
 }
 

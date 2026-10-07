@@ -50,7 +50,10 @@ export class DesktopBusTool implements Tool {
       '典型工作流：app.available 看有什么可用 → app.launch 打开应用 → window.list 确认窗口出现 → window.op(activate) 聚焦 → type/key 输入。全程纯 API，无需截图。\n' +
       '鼠标: mouse.move 移动（x,y）| mouse.click 点击（x,y,button: left/middle/right）| mouse.scroll 滚动（direction: up/down/left/right, amount 格数）；screen.size 读屏幕几何（交互坐标换算）。\n' +
       '剪贴板: clipboard.read 读剪贴板（读取当前应用内容的首选方式——比截图快且准，无需视觉模型）| clipboard.write 写剪贴板（text 必填，随后用 key ctrl+v 粘贴到目标应用）。\n' +
-      '截图: screen.snapshot 单帧截图（兜底感知——仅在纯 API 无法判断时用，如确认 GUI 渲染结果）。截图会留存文件并返回路径，需要理解画面内容时把该路径传给 vision_analyze(file_path=…)。',
+      '截图: screen.snapshot 单帧截图（兜底感知——仅在纯 API 无法判断时用，如确认 GUI 渲染结果）。截图会留存文件并返回路径，需要理解画面内容时把该路径传给 vision_analyze(file_path=…)。\n' +
+      '路径选择（先 API 后视觉）：① 优先 clipboard.read / window.list / app.list 等结构化 API；' +
+      '② 同一目标连续 2 次 API 调用无法确认结果时，升级 screen.snapshot + vision_analyze（每次升级都应有明确理由，不要退化为「先截图再想」）；' +
+      '③ 画面本身即数据（图表/扫描件/渲染结果）时直接走截图 + vision。',
     parameters: {
       type: 'object',
       properties: {

@@ -227,6 +227,42 @@ agent-hostd v1（src/host/，esbuild 单文件 dist-host/agent-hostd.cjs）
 10. 推送降级链实战：git 直连多次中断 → **gh api Contents API 写文件**（稳定）→
     网络恢复后 `git fetch` + `git rebase` 自动丢弃内容相同的本地重复补丁
 
+### 第三会话（2026-10-07 下午）— 阶段 D 全部落地，铁门槛 6/6 达成 ✅
+
+**CI run 37605169377 全绿：验收 6/6 项通过**（build 5m36s + xvfb 1m10s）
+
+| 铁门槛 | 状态 | 证据 |
+|---|---|---|
+| ① 镜像纯 API 桌面任务 E2E | ✅ | CI [6] desktop.window.list 成功 |
+| ② 红灯能力实测 | ✅ | 3/3（工具工厂 / mkosi 段落 / 删 allow） |
+| ③ 快照回滚 E2E | ✅ | 本地实测：改坏→回滚→精确还原 + 垃圾清除 |
+| ④ 浏览器零截图 E2E | ✅ | CI [7] browser navigate+extract 成功 |
+| ⑤ 并发隔离 E2E | ✅ | 本地实测：双任务 4.5s 并发、工作区互不串 |
+| ⑥ 权限矩阵自证 | ✅ | host-perm-verify（构建链内）：31/31 工具均有显式规则 |
+
+**交付**：
+- D2 并发隔离：每任务 fork `dist-host/worker.cjs`（chdir/白名单随进程隔离），
+  server 并发上限调度，桌面总线 spawn 模式 RPC 代理
+- D1 浏览器语义化 API：`cdp-client.ts`（Node 原生 ws 直连 CDP，**零 playwright 依赖**）
+  + browser 工具域六原语（navigate/extract/screenshot/click/type/eval）；权限按 action 分级
+- D4 office 旧格式：office_docs `convert`（LibreOffice headless → OOXML）
+- D5 快照回滚：`/api/workspace/snapshot|rollback` 运维 API + 审计最小集
+  （**选型修正**：PLAN-100 写的 eBPF 改为 auditd——eBPF 需 bcc/内核头，与「最小集」矛盾；
+  auditd 同源内核子系统、零编译、基础包）
+- D3 人工接管：**侦察发现已存在**（XimoOsDesktopPanel 的画布点击/滚轮/按键早已经
+  desktop.request 直达总线——headless-first「GUI 是总线客户端」的既有兑现），无需重造
+- 收尾包：视觉升级路由进 desktop 工具提示词（先 API 后视觉，含升级条件）；
+  PROTOCOL 增数据出站边界声明（屏幕经 visionBaseUrl 出站，部署方责任）与快照运维面说明
+
+**本会话抓到的自己的 bug（教训）**：workerMain 漏传 registerHandler →
+desktop-reply/approval-resp 全被丢弃 → 桌面 RPC 静默 30s 超时（CI 2×30s=67s 暴露）。
+本地 874 全绿时不可见。修后加 `tests/host/task-worker-rpc.test.ts` 3 例锁语义。
+**再次印证：真实环境验证与单元测试测的是不同的东西。**
+
+**适配度自评：~97%**（评分卡：大脑 100 / 手眼 95 / 桌面 90 / OS 层 95 / 驾驶舱 95 / 安全 90）。
+剩余 3%：btrfs 子卷布局（当前快照走 rsync，非 btrfs 快照）、按任务用户沙箱
+（当前为 worker 进程隔离）——D5 深水区，非阻塞项。
+
 ### 铁门槛进度（PLAN-100）
 - ① 镜像纯 API 桌面任务 E2E ✅（CI [6] 项）
 - ② 红灯能力实测 3/3 ✅（工具工厂 / mkosi 段落 / 删 allow）

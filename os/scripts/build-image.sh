@@ -37,7 +37,9 @@ cp -f "$REPO_ROOT/os/mkosi/provision/ximo-os-firstboot.service" "$OVERLAY/etc/sy
 cp -f "$REPO_ROOT/os/mkosi/provision/xvfb@.service" "$OVERLAY/etc/systemd/system/"
 cp -f "$REPO_ROOT/os/mkosi/provision/ximo-wm.service" "$OVERLAY/etc/systemd/system/"
 cp -f "$REPO_ROOT/os/mkosi/provision/firstboot.sh" "$OVERLAY/usr/local/sbin/ximo-os-firstboot.sh"
+cp -f "$REPO_ROOT/os/mkosi/provision/ximo-os-audit.sh" "$OVERLAY/usr/local/sbin/ximo-os-audit.sh"
 chmod 755 "$OVERLAY/usr/local/sbin/ximo-os-firstboot.sh"
+chmod 755 "$OVERLAY/usr/local/sbin/ximo-os-audit.sh"
 # 相对软链 = systemctl enable 的等价物（不依赖 mkosi 脚本时序）
 ln -sfn ../agent-hostd.service "$OVERLAY/etc/systemd/system/multi-user.target.wants/agent-hostd.service"
 ln -sfn ../ximo-os-firstboot.service "$OVERLAY/etc/systemd/system/multi-user.target.wants/ximo-os-firstboot.service"

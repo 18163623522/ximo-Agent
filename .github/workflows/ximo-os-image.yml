@@ -30,8 +30,8 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci
 
-      - name: 构建主机运行时（agent-hostd.cjs）
-        run: npm run host:build
+      - name: 构建主机运行时（agent-hostd.cjs）+ 清点 + 权限矩阵自检
+        run: npm run host:build   # 链内含 host-verify（工具清点）+ host-perm-verify（铁门槛⑥）
 
       - name: 安装 mkosi 与 qemu
         run: |
