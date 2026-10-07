@@ -36,7 +36,12 @@ const electronShim = {
   },
   BrowserWindow: Object.assign(
     function FakeBrowserWindow(this: unknown): void { /* 主机运行时不创建窗口 */ },
-    { getAllWindows: (): unknown[] => [], fromWebContents: (): null => null }
+    {
+      getAllWindows: (): unknown[] => [],
+      fromWebContents: (): null => null,
+      // WebviewBridge.ts 调用点 — 主机无窗口语义，返回 null（无聚焦窗口）
+      getFocusedWindow: (): null => null,
+    }
   ),
   Notification: Object.assign(
     function FakeNotification(this: unknown): void {},
@@ -80,10 +85,23 @@ const electronShim = {
   contextBridge: { exposeInMainWorld: noop },
 }
 
-// 未知成员兜底 — 可移植模块迭代新增 API 时告警而非硬崩
+// 未知成员兜底 — 默认严格模式（生产主机）：未覆盖的 API 直接抛错而非 no-op，
+// 把「假成功」变成显式失败。XIMO_SHIM_STRICT=0 可临时回退宽松模式（排障用）。
+const SHIM_STRICT = process.env.XIMO_SHIM_STRICT !== '0'
 const shimProxy = new Proxy(electronShim, {
   get(target, prop, receiver) {
     if (prop in target) return Reflect.get(target, prop, receiver)
+    // 语言内部探测不拦截：await 的 thenable 检查（.then/.catch/.finally）、
+    // 调试/序列化 symbol —— 返回 undefined 使模块命名空间可以被正常 await
+    if (typeof prop === 'symbol' || prop === 'then' || prop === 'catch' || prop === 'finally') {
+      return undefined
+    }
+    if (SHIM_STRICT) {
+      throw new Error(
+        `[electron-shim] 严格模式：未覆盖的 electron API: ${String(prop)} — ` +
+        `请在 electron-shim.ts 显式实现替身（临时回退：XIMO_SHIM_STRICT=0）`,
+      )
+    }
     console.warn(`[electron-shim] 未覆盖的 electron API: ${String(prop)} — 返回 no-op`)
     return noop
   },

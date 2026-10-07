@@ -47,6 +47,8 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'code_lint' },
     { tool: 'code_format' },
     { tool: 'dependency_check' },
+    // 代码审查 — 只读分析（与 code_lint 同级）。此前未列入任何清单 → 静默回退
+    { tool: 'code_review' },
     { tool: 'web_search' },
     { tool: 'web_fetch' },
     { tool: 'todo_write' },
@@ -67,6 +69,10 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'web_research' },
     { tool: 'memory_update' },
     { tool: 'skill_invoke' },
+    // 技能录制与专家库 — 写自有数据目录/只读激活，与 skill_invoke 同级；
+    // 此前未列入 → 静默回退（主机无人值守下形同虚设）
+    { tool: 'skill_record' },
+    { tool: 'agent_expert' },
     // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）
@@ -151,6 +157,11 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     // 记忆写入与技能调用 — 无外部副作用（与主机无人值守场景一致的理由）
     { tool: 'memory_update' },
     { tool: 'skill_invoke' },
+    // 技能录制与专家库 — 与 skill_invoke 同级（写自有数据目录/只读激活）
+    { tool: 'skill_record' },
+    { tool: 'agent_expert' },
+    // 代码审查 — 只读分析（office 模式清单含此工具，此前静默回退 ask）
+    { tool: 'code_review' },
     { tool: 'file_read' },
     { tool: 'file_list' },
     { tool: 'file_search' },

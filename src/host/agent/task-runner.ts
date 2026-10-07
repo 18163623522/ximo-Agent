@@ -19,13 +19,17 @@ import { toolRegistry } from '../../main/tools/ToolRegistry'
 export { toolRegistry }
 import { setAllowedWriteRoots } from '../../main/security-guard'
 import { loadSettings, saveSettings } from '../../main/store'
+import { evaluate, getConfigForMode } from '../../main/Permission'
 import { DesktopBusTool } from '../tools/desktop-tool'
 import { OfficeDocsTool } from '../tools/office-docs-tool'
+import { HOST_TOOL_GROUPS, HOST_TOOL_NAMES } from './tool-inventory'
 import type { DesktopBus } from '../desktop/bus'
 import type { ApiMessage, AppSettings, ChatRequest, ModelId, Mode, StreamChunk, ToolContext, RunnerEvent } from '../../shared/types'
 
 // 事件类型与 cockpit-link 契约同源（@shared/types/cockpit），驾驶舱 HostClient 直接消费
 export type { RunnerEvent }
+// 清单本体在 tool-inventory（纯数据模块，对账测试直接消费）— 此处 re-export 保持导入方零改动
+export { HOST_TOOL_GROUPS, HOST_TOOL_NAMES }
 
 export interface TaskInput {
   id: string
@@ -49,36 +53,25 @@ export interface TaskOutput {
   error?: string
 }
 
-/** 主机可移植工具域 — 与 lazy-registry 的模块组一一对应 */
-export const HOST_TOOL_GROUPS = [
-  'file_system', 'terminal', 'git', 'web_intelligence', 'memory', 'skill', 'vision',
-  // 代码质量 — 主机默认 coding 模式，无此组则无法 lint/格式化/依赖检查/项目索引
-  // （全组零 electron import，纯 Node 可移植）
-  'code_quality', 'code_review',
-]
-
-const HOST_TOOL_NAMES = [
-  // file_system
-  'file_read', 'file_write', 'file_list', 'file_search', 'file_edit', 'file_delete',
-  'multi_edit', 'move_file', 'todo_write',
-  // terminal / git
-  'terminal_exec', 'git_operations',
-  // web_intelligence
-  'web_search', 'web_fetch', 'web_cache', 'web_research',
-  // memory
-  'memory_update', 'knowledge',
-  // skill
-  'skill_record', 'skill_invoke', 'agent_expert', 'create_tool',
-  // vision — 配套 desktop 截图：Agent 截屏后据此理解画面内容
-  'vision_analyze',
-  // code_quality — 代码执行/检查/格式化/依赖/项目上下文与索引
-  'code_execute', 'code_lint', 'code_format', 'dependency_check',
-  'project_context', 'project_index',
-  // code_review — 代码审查
-  'code_review',
-]
-
-export { HOST_TOOL_NAMES }
+/** 权限矩阵启动自检（铁门槛⑥）— 主机无人值守：未匹配清单的工具 = 显式拒绝 */
+function logPermissionMatrix(toolNames: string[], mode: string): void {
+  const config = { ...getConfigForMode(mode), defaultDecision: 'deny' as const }
+  const rules = [...config.allow, ...config.ask, ...config.deny]
+  const noRule: string[] = []
+  const lines = toolNames.map((name) => {
+    // 有无规则按工具名判定（subject 级规则如 office_docs read/replace 也算覆盖）；
+    // decision 是工具级（subject=undefined）评估结果 — subject 级覆盖的工具会显示 deny，
+    // 以实际调用时 extractSubject 的评估为准
+    const hasRule = rules.some((r) => r.tool === name)
+    if (!hasRule) noRule.push(name)
+    return `${evaluate(config, name, '').padEnd(5)} ${hasRule ? '' : '⚠无规则 '}${name}`
+  })
+  console.log(`[task-runner] 权限矩阵（mode=${mode}，default=deny 显式注入）:`)
+  for (const l of lines) console.log(`[task-runner]   ${l}`)
+  if (noRule.length > 0) {
+    console.warn(`[task-runner] ⚠️ ${noRule.length} 个工具没有任何权限规则（一律按默认决策拒绝）: ${noRule.join(', ')}`)
+  }
+}
 
 const ORIGINAL_CWD = process.cwd()
 
@@ -128,9 +121,15 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
     toolRegistry.register(new OfficeDocsTool())
     toolNames.push('office_docs')
 
+    // 权限自检（铁门槛⑥）— 每次任务打印工具×决策矩阵，无规则工具立即告警
+    logPermissionMatrix(toolNames, input.mode)
+
     const request: ChatRequest = {
       mode: input.mode as Mode,
       model: input.model as ModelId,
+      // 无人值守默认决策显式声明 — 未命中权限清单的工具直接拒绝（fail-closed），
+      // 而非静默回退 ask（主机上 ask = 审批超时拒绝 = 功能不可用，必须可见）
+      defaultDecisionOverride: 'deny',
       thinkingMode: true,
       reasoningEffort: 'high',
       temperature: 0.7,

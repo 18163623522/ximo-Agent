@@ -55,6 +55,10 @@ async function verifyMode(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // 主机运行时标记 — store.saveSettings 依据它决定敏感字段是否脱敏落盘
+  // （主机无真实 safeStorage，settings.json 不得保存明文 apiKey）
+  process.env.XIMO_HOST_RUNTIME = '1'
+
   // 验证模式 — 不启动服务器，执行工具清点并退出
   if (process.env.XIMO_HOST_VERIFY === '1') {
     return verifyMode()

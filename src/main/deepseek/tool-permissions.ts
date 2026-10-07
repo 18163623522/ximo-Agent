@@ -40,11 +40,15 @@ export async function checkPermissions(
   handlers: StreamHandlers,
   messages: MutableMessage[]
 ): Promise<Set<string>> {
-  const permConfig = handlers.autoModeLevel === 'yolo' || handlers.yoloMode
+  const base = handlers.autoModeLevel === 'yolo' || handlers.yoloMode
     ? YOLO_CONFIG
     : handlers.autoModeLevel === 'safe'
       ? SAFE_CONFIG
       : getConfigForMode(request.mode)
+  // 无人值守覆盖（主机注入 deny）— 显式声明默认决策，未匹配清单的工具直接拒绝
+  const permConfig = request.defaultDecisionOverride
+    ? { ...base, defaultDecision: request.defaultDecisionOverride }
+    : base
 
   const cancelledIds = new Set<string>()
 

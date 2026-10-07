@@ -110,6 +110,10 @@ export interface ChatRequest {
   providerId?: string
   /** 长任务模式 — 开启后注入长任务执行协议，持续工作直到满足用户需求 */
   longTask?: boolean
+  /** 默认决策覆盖（无人值守场景）— 主机显式注入 'deny'：权限清单未匹配的工具
+   *  直接拒绝而非回退 'ask'（fail-closed 下 ask≈永久不可用，必须显式声明并留日志）。
+   *  主应用不设置此字段，保持各模式原生回退语义。 */
+  defaultDecisionOverride?: 'allow' | 'ask' | 'deny'
 }
 
 // 流式传输的数据块

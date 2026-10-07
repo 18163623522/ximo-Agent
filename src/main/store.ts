@@ -49,7 +49,23 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
       if (redacted.hostToken) redacted.hostToken = ''
       await writeFile(settingsFile, JSON.stringify(redacted, null, 2), 'utf-8')
     } else {
-      await writeFile(settingsFile, JSON.stringify(settings, null, 2), 'utf-8')
+      // 主机运行时（真实 safeStorage 不可用）— 敏感字段禁止明文落盘：
+      // settings.json 中置空，secure.enc 也未写入（secure-storage 同样跳过）。
+      // 内存中的 settings 仍持有真实值（provider 解析不受影响）；主机每次任务
+      // 会经 ensureSettings 用 config 重写并再次走到本分支 redact。
+      // Electron 主进程侧本分支是无 safeStorage 环境的兼容路径，保持原行为。
+      // 判别标记：主机入口（src/host/index.ts）显式设置，避免误伤 vitest/其他 Node 环境
+      if (process.env.XIMO_HOST_RUNTIME === '1') {
+        console.warn('[store] safeStorage 不可用（主机运行时）— settings.json 敏感字段已脱敏，不落盘明文')
+        const redacted = { ...settings }
+        if (redacted.apiKey) redacted.apiKey = ''
+        if (redacted.visionApiKey) redacted.visionApiKey = ''
+        if (redacted.sttApiKey) redacted.sttApiKey = ''
+        if (redacted.hostToken) redacted.hostToken = ''
+        await writeFile(settingsFile, JSON.stringify(redacted, null, 2), 'utf-8')
+      } else {
+        await writeFile(settingsFile, JSON.stringify(settings, null, 2), 'utf-8')
+      }
     }
   } catch (e) {
     console.error('保存设置失败：', e)
