@@ -52,10 +52,15 @@ jobs:
         run: sudo -E bash os/scripts/build-image.sh
 
       - name: 注入 CI apiKey（如有 secret）
-        if: ${{ secrets.DEEPSEEK_API_KEY != '' }}
+        # 注意：secrets 上下文不能用于步骤级 if（workflow 启动即报错），
+        # 改在 run 块内经 env 判断
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
+          if [ -z "$DEEPSEEK_API_KEY" ]; then
+            echo "⚠ 未配置 DEEPSEEK_API_KEY secret — 跳过注入（冒烟降级为 health-only）"
+            exit 0
+          fi
           # 在覆盖树中预置 config.json（含 CI apiKey）
           # firstboot.sh 的 [ ! -f config.json ] 判断会跳过创建 → 直接用注入的版本
           mkdir -p os/mkosi/artifacts/image-overlay/opt/ximo-host/config
@@ -65,7 +70,8 @@ jobs:
             "baseUrl": "https://api.deepseek.com/v1",
             "apiKey": "$DEEPSEEK_API_KEY",
             "model": "deepseek-chat",
-            "mode": "coding"
+            "mode": "coding",
+            "display": ":99"
           }
           EOF
           chmod 600 os/mkosi/artifacts/image-overlay/opt/ximo-host/config/config.json
