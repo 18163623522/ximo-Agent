@@ -83,10 +83,12 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           cd os/mkosi
-          # 串口控制台输出写文件 — 用于提取 agent-hostd 令牌（service 侧需 journal+console）
-          # hostfwd 必须同时转发 22 与 17890 — 冒烟探测的是 cockpit-link 端口
+          # guest 控制台（console=hvc0 → mkosi 的 stdio chardev）重定向到文件 — 提取令牌用
+          # （agent-hostd.service 已 journal+console 双写；journal+console 落到 /dev/console=hvc0）
+          # hostfwd 在 mkosi.conf [Runtime] QemuArgs 里定义（mkosi 25.3 无 --qemu-args，
+          # 未知参数原样透传给 qemu 直接报 invalid option —— 历史假绿的根因）
           # 必须与构建同样 sudo：AppArmor 限制非特权 userns，mkosi 的沙箱 unshare 会被拒
-          sudo -E mkosi qemu --qemu-args "-nic user,model=virtio-net-pci,hostfwd=tcp::12222-:22,hostfwd=tcp::17890-:17890 -serial file:/tmp/serial-console.log" &
+          sudo -E mkosi qemu > /tmp/guest-console.log 2>&1 &
           QPID=$!
           # 等 cockpit-link 端口就绪（比 SSH 更说明 agent-hostd 已启动）；TCG 引导 2-5 分钟
           for i in $(seq 1 150); do
@@ -105,16 +107,16 @@ jobs:
             else
               echo "  - SSH(12222) 也不通 → 系统未完成引导（查串口日志的内核/紧急模式输出）"
             fi
-            echo "  --- 串口控制台尾部 ---"
-            sudo tail -80 /tmp/serial-console.log || echo "  （串口日志为空/不存在）"
+            echo "  --- guest 控制台尾部 ---"
+            sudo tail -80 /tmp/guest-console.log || echo "  （控制台日志为空/不存在）"
             sudo pkill -f qemu-system-x86_64 || true
             exit 1
           fi
-          # 从串口控制台日志提取令牌
-          TOKEN="$(grep -oP 'token = \K.+' /tmp/serial-console.log | head -1)" || true
+          # 从 guest 控制台提取令牌（agent-hostd 首启回显经 journal+console）
+          TOKEN="$(grep -oP 'token = \K.+' /tmp/guest-console.log | head -1)" || true
           if [ -z "$TOKEN" ]; then
-            echo "❌ 未能从串口控制台提取令牌"
-            sudo cat /tmp/serial-console.log | tail -50
+            echo "❌ 未能从 guest 控制台提取令牌"
+            sudo tail -50 /tmp/guest-console.log
             sudo pkill -f qemu-system-x86_64 || true
             exit 1
           fi
