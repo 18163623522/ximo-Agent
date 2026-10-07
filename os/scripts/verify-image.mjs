@@ -145,7 +145,10 @@ async function main() {
       '调用 desktop 工具的 window.list 动作，然后把返回的窗口列表原样转述给我（窗口数为 0 也如实说明）。')
     const desktopOk = t6.toolResults.some((r) => r.name === 'desktop' && r.success)
     record('[6] 桌面工具在环（desktop.window.list 成功）', desktopOk,
-      desktopOk ? `任务终态 ${t6.status}` : `status=${t6.status} tools=${t6.toolResults.map((r) => r.name).join(',') || '无'} err=${(t6.error ?? '').slice(0, 80)}`)
+      desktopOk ? `任务终态 ${t6.status}` : `status=${t6.status} tools=${t6.toolResults.map((r) => r.name + (r.success ? '✓' : '✗')).join(',') || '无'} err=${(t6.error ?? '').slice(0, 80)}`)
+    if (!desktopOk) {
+      for (const r of t6.toolResults) console.log(`    [${r.name}] ${String(r.content).slice(0, 300)}`)
+    }
   }
 
   // [7] 浏览器语义化 API（阶段 D1 / 铁门槛④）— 仅 --require-desktop 时检查

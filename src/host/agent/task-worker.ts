@@ -22,8 +22,9 @@ import type { TaskInput, TaskOutput } from './task-runner'
 import type { DesktopBus } from '../desktop/bus'
 import type { DesktopAction, RunnerEvent } from '../../shared/types/cockpit'
 
-/** 桌面总线 RPC 客户端 — 结构上兼容 DesktopBusTool 所需的 dispatch/enabled 面 */
-class ProxyDesktopBus {
+/** 桌面总线 RPC 客户端 — 结构上兼容 DesktopBusTool 所需的 dispatch/enabled 面。
+ *  导出供单测直接驱动（本项目真机踩过「handler 未接线 → RPC 静默超时」的坑）。 */
+export class ProxyDesktopBus {
   readonly enabled = true
   private readonly pending = new Map<string, (v: { ok: boolean; data?: unknown; error?: string }) => void>()
 
@@ -134,7 +135,12 @@ export function workerMain(): void {
   const send = (m: unknown): void => { try { process.send!(m) } catch { /* 通道已关 */ } }
   process.on('message', (m: { t?: string; input?: Parameters<typeof runWorkerTask>[0] }) => {
     if (m?.t === 'input' && m.input) {
-      void runWorkerTask(m.input, send).catch((e: unknown) => {
+      const input = m.input
+      // ⚠ 必须把 process 消息转交 runWorkerTask 的处理器：漏传会让 desktop-reply /
+      // approval-resp 全部丢弃 → 桌面 RPC 30s 超时、审批永远走 150s fail-closed 兜底
+      void runWorkerTask(input, send, (h) => {
+        process.on('message', (msg: Parameters<typeof h.onMessage>[0]) => h.onMessage(msg))
+      }).catch((e: unknown) => {
         send({ t: 'result', output: { status: 'failed', result: '', error: (e as Error).message.slice(0, 300) } })
         process.exit(1)
       })
