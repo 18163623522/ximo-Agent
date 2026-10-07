@@ -148,6 +148,17 @@ async function main() {
       desktopOk ? `任务终态 ${t6.status}` : `status=${t6.status} tools=${t6.toolResults.map((r) => r.name).join(',') || '无'} err=${(t6.error ?? '').slice(0, 80)}`)
   }
 
+  // [7] 浏览器语义化 API（阶段 D1 / 铁门槛④）— 仅 --require-desktop 时检查
+  if (process.argv.includes('--require-desktop')) {
+    console.log('
+派发浏览器任务（browser navigate + extract）…')
+    const t7 = await dispatch(token, `verify_browser_${Date.now()}`,
+      '用 browser 工具：action=navigate 打开 https://example.com ，然后 action=extract 取出页面标题与正文前 100 字，把标题告诉我。', { timeoutMs: 420_000 })
+    const browserOk = t7.toolResults.some((r) => r.name === 'browser' && r.success)
+    record('[7] 浏览器语义化 API 在环（browser navigate/extract 成功）', browserOk,
+      browserOk ? `任务终态 ${t7.status}` : `status=${t7.status} tools=${t7.toolResults.map((r) => r.name + (r.success ? '✓' : '✗')).join(',') || '无'} err=${(t7.error ?? '').slice(0, 100)}`)
+  }
+
   const failed = results.filter((r) => !r.ok)
   console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 项通过 ===`)
   console.log('[1] 请人工核对 QEMU 启动耗时是否 ≤2 分钟，并确认 os/README.md 清单全部勾选。')

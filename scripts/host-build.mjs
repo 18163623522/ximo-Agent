@@ -32,4 +32,22 @@ await esbuild.build({
   legalComments: 'none',
 })
 
-console.log('[host-build] dist-host/agent-hostd.cjs 完成')
+// worker 子进程入口（阶段 D2）— 独立 bundle：每任务 fork 一份，chdir/白名单随进程隔离
+await esbuild.build({
+  entryPoints: [join(root, 'src/host/agent/task-worker.ts')],
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node20',
+  outfile: join(root, 'dist-host/worker.cjs'),
+  alias: {
+    '@main': join(root, 'src/main'),
+    '@shared': join(root, 'src/shared'),
+  },
+  external: ['electron', 'playwright-core', 'chromium-bidi'],
+  sourcemap: false,
+  logLevel: 'warning',
+  legalComments: 'none',
+})
+
+console.log('[host-build] dist-host/agent-hostd.cjs + dist-host/worker.cjs 完成')

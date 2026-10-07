@@ -220,7 +220,8 @@ describe('agent-hostd — cockpit-link 契约（真 agent-loop）', () => {
     expect(existsSync(join(process.env.XIMO_HOST_DATA!, 'tasks', 't1.json'))).toBe(true)
   })
 
-  it('审批回路-允许：terminal_exec 需审批 → 批准后真实执行（主应用 TerminalExecTool）', async () => {
+  it('审批回路-允许：terminal_exec 需审批 → 批准后真实执行（主应用 TerminalExecTool）', { timeout: 20_000 }, async () => {
+    // 20s：真实 spawn terminal_exec + LLM stub 回放，本机负载下 5s 默认会假超时
     stubLlm([
       toolFrames('c1', 'terminal_exec', JSON.stringify({ command: 'echo hi' })),
       textFrames('命令已执行'),

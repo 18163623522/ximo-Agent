@@ -17,7 +17,7 @@ import { HOST_TOOL_NAMES, HOST_TOOL_GROUPS } from '../../src/host/agent/tool-inv
 /** 主应用全部模式的工具面（任一模式注册即可视为"存在"） */
 const MAIN_APP_SURFACE = new Set(Object.values(modeToolNames).flat())
 /** 主机运行时注册的工具 — 不在静态清单里，由 task-runner 在任务期注册 */
-const HOST_RUNTIME_TOOLS = ['desktop', 'office_docs']
+const HOST_RUNTIME_TOOLS = ['desktop', 'office_docs', 'browser']
 /** 防护性预埋规则 — 引用的工具当前任何模式都不注册，但保留 ask 语义：
  *  若未来重新接入这些工具，审批意图已在。与 deny 规则同等豁免。 */
 const PROTECTIVE_RULES = ['browser_execute_js', 'network_replay']

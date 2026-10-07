@@ -13,14 +13,14 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { existsSync } from 'fs'
-import { join } from 'path'
+import { dirname, basename, join } from 'path'
 import type { Tool } from '../../main/tools/Tool'
 import type { ToolDefinition, ToolCall, ToolResult, StreamChunk } from '../../shared/types'
 
 const execFileAsync = promisify(execFile)
 
-type Action = 'read' | 'info' | 'sheets' | 'replace'
-const ACTIONS: Action[] = ['read', 'info', 'sheets', 'replace']
+type Action = 'read' | 'info' | 'sheets' | 'replace' | 'convert'
+const ACTIONS: Action[] = ['read', 'info', 'sheets', 'replace', 'convert']
 
 /**
  * helper 脚本路径 — 按候选顺序探测。
@@ -48,9 +48,9 @@ export class OfficeDocsTool implements Tool {
     name: 'office_docs',
     description:
       '读写 Office 文档（.docx/.xlsx/.pptx，OOXML 格式，零依赖解析）。\n' +
-      '动作: read 读全文（段落+表格 / 工作表单元格 / 幻灯片文本）| info 结构摘要（类型/字数/段落数/表格数/行数）| sheets 列出工作表与范围（仅 xlsx）| replace 文本替换（filePath + old + new，原地改写）。\n' +
-      '典型：先 info 了解结构 → read 取内容 → 需要改动用 replace。\n' +
-      '限制：仅 OOXML（.doc 等旧二进制格式不支持）；复杂排版请在 GUI 应用里做（desktop 工具）。',
+      '动作: read 读全文（段落+表格 / 工作表单元格 / 幻灯片文本）| info 结构摘要（类型/字数/段落数/表格数/行数）| sheets 列出工作表与范围（仅 xlsx）| replace 文本替换（filePath + old + new，原地改写）| convert 旧格式转 OOXML（.doc/.xls/.ppt → 同名 .docx/.xlsx/.pptx，依赖 LibreOffice，仅镜像环境）。\n' +
+      '典型：先 info 了解结构 → read 取内容 → 需要改动用 replace。旧格式先 convert 再 read。\n' +
+      '限制：仅 OOXML（.doc 等旧二进制格式用 convert 转换后再读）；复杂排版请在 GUI 应用里做（desktop 工具）。',
     parameters: {
       type: 'object',
       properties: {
@@ -72,6 +72,8 @@ export class OfficeDocsTool implements Tool {
       return this.error(toolCall.id, `未知操作: ${String(action)}（可选: ${ACTIONS.join('/')}）`)
     }
     if (!filePath) return this.error(toolCall.id, 'filePath 参数必填')
+
+    if (action === 'convert') return this.convert(toolCall, filePath, onChunk)
 
     const argv = [helperPath(), action, filePath]
     if (action === 'replace') {
@@ -107,6 +109,32 @@ export class OfficeDocsTool implements Tool {
         return this.error(toolCall.id, '主机缺少 python3 或 ooxml-helper.py（检查 /opt/ximo-host/ooxml-helper.py）')
       }
       return this.error(toolCall.id, `文档处理失败：${msg.slice(0, 200)}`)
+    }
+  }
+
+  /** convert — 旧二进制格式 → OOXML（LibreOffice headless；仅镜像环境安装） */
+  private async convert(toolCall: ToolCall, filePath: string, onChunk?: (c: StreamChunk) => void): Promise<ToolResult> {
+    const ext = filePath.toLowerCase().split('.').pop() ?? ''
+    const target = ({ doc: 'docx', xls: 'xlsx', ppt: 'pptx' } as Record<string, string>)[ext]
+    if (!target) return this.error(toolCall.id, `convert 需要 .doc/.xls/.ppt 源文件（收到 .${ext}；OOXML 可直接 read）`)
+    const outdir = dirname(filePath)
+    try {
+      const { stdout } = await execFileAsync('soffice',
+        ['--headless', '--convert-to', target, '--outdir', outdir, filePath],
+        { timeout: 180_000, maxBuffer: 4 << 20 })
+      const outFile = join(outdir, `${basename(filePath, '.' + ext)}.${target}`)
+      if (!existsSync(outFile)) {
+        return this.error(toolCall.id, `转换未产出文件。soffice 输出: ${stdout.slice(0, 200)}`)
+      }
+      onChunk?.({ toolStatus: 'done', toolName: 'office_docs' })
+      return {
+        toolCallId: toolCall.id,
+        toolName: 'office_docs',
+        content: `已转换为: ${outFile}（随后可用 office_docs action=read 读取）`,
+        success: true,
+      }
+    } catch (e) {
+      return this.error(toolCall.id, `convert 失败: ${(e as Error).message.slice(0, 200)}（convert 依赖 LibreOffice——仅 ximo-OS 镜像环境提供）`)
     }
   }
 

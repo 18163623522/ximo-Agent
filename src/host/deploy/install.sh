@@ -19,7 +19,7 @@ if has_systemd && [ "$(id -u)" = "0" ]; then
   echo "[模式 A] systemd 系统服务部署 → /opt/ximo-host"
   DEST=/opt/ximo-host
   mkdir -p "$DEST/config" "$DEST/data" "$DEST/dist-host"
-  cp -f "$REPO_ROOT/dist-host/agent-hostd.cjs" "$DEST/dist-host/"
+  cp -f "$REPO_ROOT"/dist-host/*.cjs "$DEST/dist-host/"
   install -m 644 "$(dirname "$0")/agent-hostd.service" /etc/systemd/system/agent-hostd.service
   id -u ximo-host >/dev/null 2>&1 || useradd --system --home "$DEST" --shell /usr/sbin/nologin ximo-host
   chown -R ximo-host:ximo-host "$DEST"
@@ -83,7 +83,7 @@ else
   # 持久化 node 路径 — PATH 上的 node 可能是 WSL1 不可执行的坏包（实测踩坑）
   echo "NODE=$NODE_BIN" > "$DEST/node.env"
 
-  cp -f "$REPO_ROOT/dist-host/agent-hostd.cjs" "$DEST/dist-host/"
+  cp -f "$REPO_ROOT"/dist-host/*.cjs "$DEST/dist-host/"
   install -m 755 "$(dirname "$0")/ximo-host-wsl1.sh" "$DEST/ximo-host"
   if [ ! -f "$DEST/config/config.json" ]; then
     cat > "$DEST/config/config.json" <<'EOF'

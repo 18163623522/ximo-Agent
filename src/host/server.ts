@@ -8,15 +8,17 @@
  */
 import { createServer } from 'http'
 import { randomBytes } from 'crypto'
-import { readFileSync, readdirSync, writeFileSync } from 'fs'
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { execFile } from 'child_process'
 import { join } from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { parseClientMsg, HOST_VERSION, HostMsg } from './protocol'
 import { DESKTOP_ACTIONS } from '../shared/types/cockpit'
 import { runTask } from './agent/task-runner'
+import { fork } from 'child_process'
 import { DesktopBus } from './desktop/bus'
 import { ScreenCapture } from './desktop/screen'
-import { HostConfig, loadConfig, tasksDir, workspaceDir, ensureToken } from './config'
+import { HostConfig, loadConfig, tasksDir, workspaceDir, dataDir, ensureToken } from './config'
 import type { HostTaskRecord, RunnerEvent } from '../shared/types/cockpit'
 
 /** 任务记录 — 与驾驶舱共享的类型（REST /api/tasks 与 WS 增量描述同一实体） */
@@ -38,6 +40,23 @@ export interface HostServer {
   _tasks: Map<string, { rec: TaskRecord; controller: AbortController }>
 }
 
+/** 工作区快照 —— rsync -a --delete（保留权限/时间戳，回滚为精确还原）；
+ *  无 rsync 时（宿主开发态）回退 cp -a 全量拷贝（镜像内恒有 rsync） */
+function snapshotDir(src: string, dest: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    mkdirSync(dest, { recursive: true })
+    execFile('rsync', ['-a', '--delete', `${src.replace(/\/$/, '')}/`, dest], { timeout: 120_000 }, (err) => {
+      if (!err) return resolve()
+      // rsync 缺失（ENOENT）→ cp -a 回退；其他错误（权限/磁盘）如实上报
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') return reject(err)
+      // cp 回退需自行实现 --delete 语义：先清空目标再加源内容，
+      // 否则回滚后"快照里没有的文件"会残留（非精确还原）
+      const cleaned = dest.replace(/\/$/, '')
+      execFile('bash', ['-c', `rm -rf -- "${cleaned}"/* "${cleaned}"/.[!.]* 2>/dev/null; cp -a "${src.replace(/\/$/, '')}/." "${cleaned}/"`], { timeout: 120_000 }, (e2) => (e2 ? reject(e2) : resolve()))
+    })
+  })
+}
+
 export function createHostServer(opts?: {
   config?: Partial<HostConfig>
   token?: string
@@ -50,7 +69,6 @@ export function createHostServer(opts?: {
   const tasks = new Map<string, { rec: TaskRecord; controller: AbortController }>()
   const pendingApprovals = new Map<string, { resolve: (allow: boolean) => void; timer: NodeJS.Timeout }>()
   const conns = new Set<WebSocket>()
-  let queue: Promise<void> = Promise.resolve()
 
   // 画面采集 — 渲染端数据源（/api/screen/stream 代理 + snapshot 兜底）
   const screen = opts?.deps?.screen ?? new ScreenCapture({ display: config.display })
@@ -99,32 +117,122 @@ export function createHostServer(opts?: {
     return { rec, controller }
   }
 
-  /** 实际执行 — 经串行队列调用 */
-  async function dispatchTask(id: string, task: string, mode: string | undefined): Promise<void> {
+  // ---------- 阶段 D2：worker 子进程执行 + 并发调度 ----------
+  // 每任务 fork 一个子进程：chdir/写白名单随进程隔离，任务可并发。
+  // worker.cjs 缺席（vitest/ESM 环境）时回退进程内执行（行为与 D2 之前一致）。
+  const workerPath = join(__dirname, 'worker.cjs')
+  const workerAvailable = existsSync(workerPath)
+  const pending: (() => void)[] = []
+  let running = 0
+
+  function runViaWorker(
+    id: string,
+    input: { id: string; task: string; mode: string; workspace: string; baseUrl: string; apiKey: string; model: string; desktopBusEnabled: boolean },
+    onEvent: (e: RunnerEvent) => void,
+    signal: AbortSignal,
+  ): Promise<{ status: 'completed' | 'failed' | 'cancelled'; result: string; error?: string }> {
+    return new Promise((resolvePromise) => {
+      const child = fork(workerPath, { env: { ...process.env, XIMO_TASK_WORKER: '1' }, silent: true })
+      let settled = false
+      const finish = (out: { status: 'completed' | 'failed' | 'cancelled'; result: string; error?: string }): void => {
+        if (settled) return
+        settled = true
+        running--
+        const next = pending.shift()
+        if (next) next()
+        resolvePromise(out)
+      }
+      const onAbort = (): void => {
+        if (settled) return
+        child.send({ t: 'cancel' })
+        // 宽限 10s 后强杀（worker 内 abort 级联未退出时兜底）
+        setTimeout(() => { if (!settled) child.kill('SIGKILL') }, 10_000).unref()
+      }
+      if (signal.aborted) onAbort()
+      else signal.addEventListener('abort', onAbort, { once: true })
+      child.on('message', (m: { t?: string; event?: RunnerEvent; reqId?: string; tool?: string; summary?: string; allow?: boolean; data?: unknown; error?: string; output?: { status: 'completed' | 'failed' | 'cancelled'; result: string; error?: string } }) => {
+        if (m?.t === 'event' && m.event) onEvent(m.event)
+        else if (m?.t === 'approval' && m.reqId) {
+          void requestApproval(id, m.tool ?? '', m.summary ?? '').then((allow) =>
+            child.send({ t: 'approval-resp', reqId: m.reqId, allow }),
+          )
+        } else if (m?.t === 'desktop' && m.reqId) {
+          void desktopBus.dispatch((m as unknown as { action: import('../shared/types/cockpit').DesktopAction }).action, (m as unknown as { params?: Record<string, unknown> }).params ?? {})
+            .then((data) => child.send({ t: 'desktop-reply', reqId: m.reqId, ok: true, data }))
+            .catch((e: unknown) => child.send({ t: 'desktop-reply', reqId: m.reqId, ok: false, error: (e as Error).message.slice(0, 300) }))
+        } else if (m?.t === 'result' && m.output) {
+          signal.removeEventListener('abort', onAbort)
+          child.kill('SIGTERM')
+          finish(m.output)
+        }
+      })
+      child.on('exit', (code) => {
+        if (!settled) finish({ status: 'failed', result: '', error: `worker 异常退出（code=${code}）` })
+      })
+      child.send({ t: 'input', input })
+    })
+  }
+
+  function scheduleOrRun(exec: () => void): void {
+    if (running < config.maxConcurrentTasks) {
+      running++
+      exec()
+    } else {
+      pending.push(() => { running++; exec() })
+    }
+  }
+
+  /** 实际执行 — 并发上限内调度（每任务 worker 子进程；无 worker 时进程内执行） */
+  function dispatchTask(id: string, task: string, mode: string | undefined): void {
     const entry = tasks.get(id)
     if (!entry) return
     const { rec, controller } = entry
-    if (controller.signal.aborted) {
-      rec.status = 'cancelled'
+
+    const finish = (out: { status: 'completed' | 'failed' | 'cancelled'; result: string; error?: string }): void => {
+      rec.status = out.status
+      rec.result = out.result
+      rec.error = out.error
       rec.finishedAt = Date.now()
       persist(rec)
-      broadcast({ t: 'task.done', id, status: 'cancelled', result: '' })
-      return
+      broadcast({ t: 'task.done', id, status: out.status, result: out.result, error: out.error })
     }
 
-    rec.status = 'running'
-    persist(rec)
-    broadcast({ t: 'task.status', id, stage: 'running' })
-
-    let seq = 0
-    const onEvent = (e: RunnerEvent): void => {
-      rec.chunks.push(e)
-      broadcast({ t: 'task.chunk', id, seq: seq++, delta: e })
+    scheduleOrRun(() => {
+      if (controller.signal.aborted) {
+        finish({ status: 'cancelled', result: '' })
+        return
+      }
+      rec.status = 'running'
       persist(rec)
-    }
+      broadcast({ t: 'task.status', id, stage: 'running' })
 
-    try {
-      const out = await runTask({
+      let seq = 0
+      const onEvent = (e: RunnerEvent): void => {
+        rec.chunks.push(e)
+        broadcast({ t: 'task.chunk', id, seq: seq++, delta: e })
+        persist(rec)
+      }
+
+      if (workerAvailable) {
+        void runViaWorker(
+          id,
+          {
+            id, task,
+            mode: mode || config.mode,
+            workspace: workspaceDir(id),
+            baseUrl: config.baseUrl,
+            apiKey: config.apiKey,
+            model: config.model,
+            desktopBusEnabled: desktopBus.enabled,
+          },
+          onEvent,
+          controller.signal,
+        ).then(finish, (e: unknown) => finish({ status: 'failed', result: '', error: (e as Error).message.slice(0, 300) }))
+        return
+      }
+
+      // 进程内回退（vitest/ESM：worker.cjs 不存在）
+      void runTask({
         id, task,
         mode: mode || config.mode,
         workspace: workspaceDir(id),
@@ -135,20 +243,8 @@ export function createHostServer(opts?: {
         signal: controller.signal,
         onEvent,
         approval: (tool, summary) => requestApproval(id, tool, summary),
-      })
-      rec.status = out.status
-      rec.result = out.result
-      rec.error = out.error
-      rec.finishedAt = Date.now()
-      persist(rec)
-      broadcast({ t: 'task.done', id, status: out.status, result: out.result, error: out.error })
-    } catch (e) {
-      rec.status = 'failed'
-      rec.error = (e as Error).message.slice(0, 300)
-      rec.finishedAt = Date.now()
-      persist(rec)
-      broadcast({ t: 'task.done', id, status: 'failed', result: '', error: rec.error })
-    }
+      }).then(finish, (e: unknown) => finish({ status: 'failed', result: '', error: (e as Error).message.slice(0, 300) }))
+    })
   }
 
   const httpServer = createServer(async (req, res) => {
@@ -175,6 +271,32 @@ export function createHostServer(opts?: {
         try { return JSON.parse(readFileSync(join(tasksDir(), f), 'utf-8')) as TaskRecord } catch { return null }
       }).filter(Boolean)
       return json(200, { ok: true, tasks: [...live, ...past] })
+    }
+    // 工作区快照运维（阶段 D5，铁门槛③）— 仅带 Bearer 的本机/运维方调用，
+    // 不进 cockpit-link（驾驶舱无回滚语义）。实现：rsync 硬链接快照（空间近零成本）
+    if (req.url?.startsWith('/api/workspace/snapshot') || req.url?.startsWith('/api/workspace/rollback')) {
+      if (!authed) return json(401, { ok: false, error: '需要 Bearer 令牌' })
+      const url = new URL(req.url, 'http://localhost')
+      const taskId = url.searchParams.get('task') ?? ''
+      if (!/^[A-Za-z0-9_-]+$/.test(taskId)) return json(400, { ok: false, error: 'task 参数非法' })
+      const ws = workspaceDir(taskId)
+      const snaps = join(dataDir(), 'snapshots', taskId)
+      const isRollback = req.url.startsWith('/api/workspace/rollback')
+      try {
+        if (isRollback) {
+          const snapId = url.searchParams.get('snap') ?? ''
+          if (!/^[A-Za-z0-9_.-]+$/.test(snapId)) return json(400, { ok: false, error: 'snap 参数非法' })
+          const src = join(snaps, snapId)
+          if (!existsSync(src)) return json(404, { ok: false, error: `快照不存在: ${snapId}` })
+          await snapshotDir(src, ws)
+          return json(200, { ok: true, rolledBack: taskId, snap: snapId })
+        }
+        const snapId = `snap_${Date.now()}`
+        await snapshotDir(ws, join(snaps, snapId))
+        return json(200, { ok: true, task: taskId, snap: snapId, path: join(snaps, snapId) })
+      } catch (e) {
+        return json(500, { ok: false, error: (e as Error).message.slice(0, 200) })
+      }
     }
     if (req.url === '/api/screen/snapshot') {
       if (!authed) return json(401, { ok: false, error: '需要 Bearer 令牌' })
@@ -237,7 +359,7 @@ export function createHostServer(opts?: {
           const id = msg.id || `task_${Date.now()}_${randomBytes(3).toString('hex')}`
           register(id, msg.task, msg.mode)
           broadcast({ t: 'task.accepted', id })
-          queue = queue.then(() => dispatchTask(id, msg.task, msg.mode)).catch(() => {})
+          dispatchTask(id, msg.task, msg.mode)
         } else if (msg.t === 'task.cancel') {
           tasks.get(msg.id)?.controller.abort()
         } else if (msg.t === 'approval.respond') {

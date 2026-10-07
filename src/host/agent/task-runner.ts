@@ -22,6 +22,7 @@ import { loadSettings, saveSettings } from '../../main/store'
 import { evaluate, getConfigForMode } from '../../main/Permission'
 import { DesktopBusTool } from '../tools/desktop-tool'
 import { OfficeDocsTool } from '../tools/office-docs-tool'
+import { BrowserTool } from '../tools/browser-tool'
 import { HOST_TOOL_GROUPS, HOST_TOOL_NAMES } from './tool-inventory'
 import type { DesktopBus } from '../desktop/bus'
 import type { ApiMessage, AppSettings, ChatRequest, ModelId, Mode, StreamChunk, ToolContext, RunnerEvent } from '../../shared/types'
@@ -120,6 +121,12 @@ export async function runTask(input: TaskInput): Promise<TaskOutput> {
     // officecli.exe，Linux 主机不可用；此处走 python 标准库 helper）
     toolRegistry.register(new OfficeDocsTool())
     toolNames.push('office_docs')
+    // 浏览器语义化工具（阶段 D1）— 镜像/部署设 XIMO_HOST_BROWSER=1 启用
+    // （CDP 直连 chromium；worker fork 继承 env，与父同开关）
+    if (process.env.XIMO_HOST_BROWSER === '1') {
+      toolRegistry.register(new BrowserTool())
+      toolNames.push('browser')
+    }
 
     // 权限自检（铁门槛⑥）— 每次任务打印工具×决策矩阵，无规则工具立即告警
     logPermissionMatrix(toolNames, input.mode)

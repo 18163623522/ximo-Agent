@@ -30,7 +30,7 @@ mkdir -p \
   "$OVERLAY/opt/ximo-host/dist-host" \
   "$OVERLAY/etc/systemd/system/multi-user.target.wants" \
   "$OVERLAY/usr/local/sbin"
-cp -f "$REPO_ROOT/dist-host/agent-hostd.cjs" "$OVERLAY/opt/ximo-host/dist-host/"
+cp -f "$REPO_ROOT"/dist-host/*.cjs "$OVERLAY/opt/ximo-host/dist-host/"
 cp -f "$SERVICE_SRC" "$OVERLAY/etc/systemd/system/agent-hostd.service"
 cp -f "$REPO_ROOT/os/mkosi/provision/ximo-os-firstboot.service" "$OVERLAY/etc/systemd/system/"
 # 桌面会话单元（阶段 B1）— Xvfb :99 + openbox；由 agent-hostd 的 Wants= 依赖拉起

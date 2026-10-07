@@ -62,6 +62,7 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'office_docs', subject: 'read' },
     { tool: 'office_docs', subject: 'info' },
     { tool: 'office_docs', subject: 'sheets' },
+    { tool: 'office_docs', subject: 'convert' },
     // 联网缓存/调研、记忆写入、技能调用 — 无外部副作用（写的是自有数据目录）。
     // 此前未列入 allow → 回退 ask；主机侧无人值守（fail-closed）下这些工具
     // 形同虚设，且白占上下文、诱导模型尝试后必然失败
@@ -77,6 +78,12 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）
     { tool: 'desktop' },
+    // 浏览器语义化 API（阶段 D1）— 只读/页面内操作放行；任意 JS（eval）在 ask
+    { tool: 'browser', subject: 'navigate' },
+    { tool: 'browser', subject: 'extract' },
+    { tool: 'browser', subject: 'screenshot' },
+    { tool: 'browser', subject: 'click' },
+    { tool: 'browser', subject: 'type' },
     // WSL 隔离桌面 — 画面/交互类操作自动允许（exec/launch 在 ask 列表）
     { tool: 'wsl_desktop', subject: 'screenshot' },
     { tool: 'wsl_desktop', subject: 'click' },
@@ -106,6 +113,8 @@ export const CODING_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'file_delete' },
     // Office 文档替换会原地改写文件 — 与 file_edit 同级审批
     { tool: 'office_docs', subject: 'replace' },
+    // 浏览器任意 JS — 等同 code_execute 审批级别（阶段 D1）
+    { tool: 'browser', subject: 'eval' },
     // WSL 桌面内执行命令/启动应用 — 等同 terminal_exec 审批级别
     { tool: 'wsl_desktop', subject: 'exec' },
     { tool: 'wsl_desktop', subject: 'launch' },
@@ -176,6 +185,13 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'office_docs', subject: 'read' },
     { tool: 'office_docs', subject: 'info' },
     { tool: 'office_docs', subject: 'sheets' },
+    { tool: 'office_docs', subject: 'convert' },
+    // 浏览器语义化 API（阶段 D1）— 与 coding 同级
+    { tool: 'browser', subject: 'navigate' },
+    { tool: 'browser', subject: 'extract' },
+    { tool: 'browser', subject: 'screenshot' },
+    { tool: 'browser', subject: 'click' },
+    { tool: 'browser', subject: 'type' },
     // 桌面 API 总线（host desktop-bus 专用工具，主应用内不存在）— 隔离桌面上的
     // 窗口/应用/键盘操作全量放行，是阶段 2「纯 API 零截图」自动化的前提；
     // 命令执行不在该工具内（走 terminal_exec 审批）
@@ -207,6 +223,8 @@ export const OFFICE_DEFAULT_CONFIG: PermissionConfig = {
     { tool: 'move_file' },
     { tool: 'act_ui' },
     { tool: 'code_execute' },
+    { tool: 'browser', subject: 'eval' },
+    { tool: 'browser', subject: 'eval' },
     { tool: 'code_format' },
     { tool: 'dependency_check' },
     { tool: 'browser_execute_js' },
@@ -291,6 +309,9 @@ export function extractSubject(toolName: string, args: Record<string, unknown>):
       return (args.action as string) || ''
     case 'office_docs':
       // 读类（read/info/sheets）放行、写类（replace）审批 — 按 action 分级
+      return (args.action as string) || ''
+    case 'browser':
+      // 语义化动作分级：navigate/extract/screenshot/click/type 放行、eval 审批
       return (args.action as string) || ''
     case 'file_delete':
       return (args.filePath as string) || ''

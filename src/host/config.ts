@@ -24,6 +24,8 @@ export interface HostConfig {
   approvalTimeoutMs: number
   /** desktop-bus 使用的 X 显示（Xvfb 桌面会话）；空 = 桌面功能停用 */
   display: string
+  /** 并发任务上限（阶段 D2：每任务 fork 子进程，工作区/白名单随进程隔离） */
+  maxConcurrentTasks: number
 }
 
 export const DEFAULT_CONFIG: HostConfig = {
@@ -34,6 +36,7 @@ export const DEFAULT_CONFIG: HostConfig = {
   mode: process.env.XIMO_HOST_MODE || 'coding',
   approvalTimeoutMs: Number(process.env.XIMO_HOST_APPROVAL_TIMEOUT_MS) || 120_000,
   display: process.env.XIMO_HOST_DISPLAY ?? ':99',
+  maxConcurrentTasks: Number(process.env.XIMO_HOST_MAX_CONCURRENT) || 2,
 }
 
 export function configDir(): string {
