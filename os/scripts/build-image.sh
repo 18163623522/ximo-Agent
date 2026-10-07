@@ -7,7 +7,7 @@ set -euo pipefail
 REPO_ROOT="${XIMO_REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 STAGE="$REPO_ROOT/os/mkosi/artifacts"
 
-echo "[1/4] 前置检查"
+echo "[1/5] 前置检查"
 test -f "$REPO_ROOT/dist-host/agent-hostd.cjs" || {
   echo "  ✗ 缺少 dist-host/agent-hostd.cjs — 先在 Windows 侧执行 npm run host:build"; exit 1
 }
@@ -16,7 +16,7 @@ command -v mkosi >/dev/null || {
 }
 command -v qemu-img >/dev/null || echo "  ⚠ 未安装 qemu-utils（转 VHDX 需要）：sudo apt-get install -y qemu-utils"
 
-echo "[2/4] 归集主机运行时产物 → 镜像覆盖树"
+echo "[2/5] 归集主机运行时产物 → 镜像覆盖树"
 # service 文件兼容两种布局：完整仓库（src/host/deploy）或精简构建树（os/mkosi/provision）
 SERVICE_SRC=""
 for cand in "$REPO_ROOT/src/host/deploy/agent-hostd.service" "$REPO_ROOT/os/mkosi/provision/agent-hostd.service"; do
@@ -33,17 +33,36 @@ mkdir -p \
 cp -f "$REPO_ROOT/dist-host/agent-hostd.cjs" "$OVERLAY/opt/ximo-host/dist-host/"
 cp -f "$SERVICE_SRC" "$OVERLAY/etc/systemd/system/agent-hostd.service"
 cp -f "$REPO_ROOT/os/mkosi/provision/ximo-os-firstboot.service" "$OVERLAY/etc/systemd/system/"
+# 桌面会话单元（阶段 B1）— Xvfb :99 + openbox；由 agent-hostd 的 Wants= 依赖拉起
+cp -f "$REPO_ROOT/os/mkosi/provision/xvfb@.service" "$OVERLAY/etc/systemd/system/"
+cp -f "$REPO_ROOT/os/mkosi/provision/ximo-wm.service" "$OVERLAY/etc/systemd/system/"
 cp -f "$REPO_ROOT/os/mkosi/provision/firstboot.sh" "$OVERLAY/usr/local/sbin/ximo-os-firstboot.sh"
 chmod 755 "$OVERLAY/usr/local/sbin/ximo-os-firstboot.sh"
 # 相对软链 = systemctl enable 的等价物（不依赖 mkosi 脚本时序）
 ln -sfn ../agent-hostd.service "$OVERLAY/etc/systemd/system/multi-user.target.wants/agent-hostd.service"
 ln -sfn ../ximo-os-firstboot.service "$OVERLAY/etc/systemd/system/multi-user.target.wants/ximo-os-firstboot.service"
 
-echo "[3/4] mkosi 构建（首次会下载 Debian 基础包，约几分钟）"
+echo "[3/5] mkosi summary — 断言配置解析非空（防静默忽略）"
 cd "$REPO_ROOT/os/mkosi"
+SUMMARY="$(mkosi summary 2>&1)" || { echo "  ✗ mkosi summary 失败"; echo "$SUMMARY"; exit 1; }
+# 断言 Packages 主行非空（summary 的续行只是展示格式，见 mkosi.conf 语法注意 1）
+echo "$SUMMARY" | grep -E '^[[:space:]]*Packages:' | grep -qviE 'packages:[[:space:]]*none$' || {
+  echo "  ✗ summary 未解析到 Packages（配置段可能放错）"; exit 1
+}
+# 断言 PostInstallationScripts 生效 — mkosi 25.3 summary 显示为 "Postinstall Scripts:"
+# （字段名带空格，grep 'PostInstallationScripts' 永远匹配不上）；放错段时显示 none
+# 且无任何警告，见 mkosi.conf 语法注意 2
+POSTINSTALL_LINE="$(echo "$SUMMARY" | grep -i 'postinstall scripts:')"
+[ -n "$POSTINSTALL_LINE" ] || { echo "  ✗ summary 未解析到 Postinstall Scripts"; exit 1; }
+echo "$POSTINSTALL_LINE" | grep -qiE 'postinstall scripts:[[:space:]]*none' && {
+  echo "  ✗ PostInstallationScripts 未生效（可能放错了段 — 段落放错是静默忽略）"; exit 1
+}
+echo "  ✓ Packages / Postinstall Scripts 解析正常"
+
+echo "[4/5] mkosi 构建（首次会下载 Debian 基础包，约几分钟）"
 mkosi build
 
-echo "[4/4] 完成"
+echo "[5/5] 完成"
 ls -lh out/ || true
 cat <<'NEXT'
 

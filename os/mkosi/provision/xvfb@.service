@@ -1,0 +1,16 @@
+# Xvfb 虚拟显示（ximo-OS 桌面会话的地基）— 实例化为 xvfb@99.service
+# 由 agent-hostd.service 的 Wants= 拉起（依赖驱动，不单独 enable）
+# -ac： appliance 形态关闭 X 访问控制（会话仅服务本机进程；XX 期按任务用户沙箱再收紧）
+[Unit]
+Description=Xvfb virtual display :%i (ximo-OS desktop session)
+After=systemd-user-sessions.service
+
+[Service]
+Type=simple
+User=ximo-host
+ExecStart=/usr/bin/Xvfb :%i -screen 0 1280x800x24 -nolisten tcp -ac
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

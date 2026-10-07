@@ -55,7 +55,7 @@ function resolveToken() {
   }
 }
 
-async function checkHealth(token) {
+async function checkHealth(token, { requireDesktop = false } = {}) {
   try {
     const res = await fetch(`http://127.0.0.1:${PORT}/api/health`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -64,6 +64,14 @@ async function checkHealth(token) {
     if (!res.ok) return record('[3] /api/health', false, `HTTP ${res.status}`)
     const body = await res.json()
     record('[3] /api/health', body.ok === true, `name=${body.name} version=${body.version} mode=${body.mode}`)
+    // 桌面栈就绪（阶段 B1）— CI 传 --require-desktop 时为硬断言；
+    // 对旧镜像 / WSL1 形态验收时缺省跳过（不阻塞阶段 1 清单）
+    if (requireDesktop) {
+      record('[3b] 桌面栈就绪（Xvfb 会话）', body.desktop?.enabled === true,
+        body.desktop ? `display=${body.desktop.display}` : '主机未上报 desktop 状态（镜像缺桌面栈）')
+    } else if (body.desktop) {
+      console.log(`ℹ 桌面栈：${body.desktop.enabled ? '已启用' : '未启用'}（display=${body.desktop.display}）— 加 --require-desktop 可作为硬断言`)
+    }
   } catch (e) {
     record('[3] /api/health', false, `连接失败：${e.message}`)
   }
@@ -89,7 +97,7 @@ function dispatch(token, id, task, { approveIfAsked = false, timeoutMs = 120_000
         }
       }
       if (m.t === 'task.chunk' && m.delta?.type === 'tool_result') {
-        toolResults.push({ name: m.delta.name, content: String(m.delta.content ?? '') })
+        toolResults.push({ name: m.delta.name, content: String(m.delta.content ?? ''), success: m.delta.success === true })
       }
       if (m.t === 'task.done') {
         clearTimeout(timer)
@@ -128,6 +136,16 @@ async function main() {
   record('[5] 审批路径触发 approval.request',
     t5.asked,
     t5.asked ? `任务终态 ${t5.status}（已自动批准）` : '未收到 approval.request')
+
+  // [6] 桌面栈在环（阶段 B1 / 铁门槛①）— 仅 --require-desktop 时为硬断言
+  if (process.argv.includes('--require-desktop')) {
+    console.log('\n派发桌面工具任务（desktop window.list）…')
+    const t6 = await dispatch(token, `verify_desk_${Date.now()}`,
+      '调用 desktop 工具的 window.list 动作，然后把返回的窗口列表原样转述给我（窗口数为 0 也如实说明）。')
+    const desktopOk = t6.toolResults.some((r) => r.name === 'desktop' && r.success)
+    record('[6] 桌面工具在环（desktop.window.list 成功）', desktopOk,
+      desktopOk ? `任务终态 ${t6.status}` : `status=${t6.status} tools=${t6.toolResults.map((r) => r.name).join(',') || '无'} err=${(t6.error ?? '').slice(0, 80)}`)
+  }
 
   const failed = results.filter((r) => !r.ok)
   console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 项通过 ===`)

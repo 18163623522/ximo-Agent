@@ -1,0 +1,17 @@
+# openbox 窗口管理器 — 挂在 Xvfb :99 上，提供窗口管理语义（wmctrl/激活/几何操作）
+# desktop-bus 的 window.op/active 等动作依赖 WM；无 WM 时窗口树退化但可用
+[Unit]
+Description=openbox window manager on :%i (ximo-OS desktop)
+Requires=xvfb@99.service
+After=xvfb@99.service
+
+[Service]
+Type=simple
+User=ximo-host
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/openbox
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
