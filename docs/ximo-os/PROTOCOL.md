@@ -30,7 +30,7 @@
 
 | t | 字段 | 说明 |
 |---|---|---|
-| `hello` | `version` `name` | 连接建立后的第一条消息 |
+| `hello` | `version` `name` `actions?` | 连接建立后的第一条消息；`actions` 为主机支持的桌面动作清单（能力协商，缺省=旧主机） |
 | `task.accepted` | `id` | 任务受理（含幂等冲突时改发 `error`） |
 | `task.status` | `id` `stage` | `running` / `awaiting_approval` |
 | `task.chunk` | `id` `seq` `delta` | 增量流：`text`（LLM 文本）/ `tool`（调工具）/ `tool_result`（工具结果） |
@@ -64,6 +64,7 @@
 
 | 端点 | 说明 |
 |---|---|
+| `GET /api/health` | `{ ok, name, version, mode, desktop: { enabled, display } }` — desktop.enabled 表示 X 会话在位（CI 冒烟断言点） |
 | `GET /api/screen/stream` | ffmpeg MJPEG 实时画面流（`multipart/x-mixed-replace`）；驾驶舱经 `ximo-host-cam://` 协议代理给 `<img>` |
 | `GET /api/screen/snapshot` | 单帧截图 `{ ok, screenshot }`（base64 data URL）——画面流不可用时的兜底渲染源 |
 
@@ -92,10 +93,11 @@
 
 ## 4. 安全语义（契约级，两端共同遵守）
 
-1. **fail-closed**：审批拿不到响应 = 拒绝；无任何旁路放行。
-2. **权限引擎同源**：主机侧使用与主应用相同的 allow/ask/deny 规则（`src/main/Permission.ts`），驾驶舱展示的审批文案不漂移。
+1. **fail-closed**：审批拿不到响应 = 拒绝；无任何旁路放行。主机侧默认决策显式注入 deny（无人值守：未命中权限清单的工具=拒绝，且启动矩阵有告警）。
+2. **权限引擎同源**：主机侧使用与主应用相同的 allow/ask/deny 规则（`src/main/Permission.ts`），驾驶舱展示的审批文案不漂移；规则与工具清单有三方对账测试防漂移。
 3. **沙箱**：文件工具锁死任务工作区；`web_fetch` 复用主应用 SSRF 防护；终端命令经审批。
 4. **控制面唯一**：驾驶舱对主机的全部影响只经本协议；主机不出站连接驾驶舱。
+5. **版本偏斜降级**：未知 `t` → `error` 帧并断连（协议级错误）；**未知 desktop action → `desktop.reply(ok:false)`，连接保持**（动作级失败）。驾驶舱以 `hello.actions` 做本地预判，不发必败帧。
 
 ## 5. 驾驶舱对接点（现有 Electron App）
 
