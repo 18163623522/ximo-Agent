@@ -33,4 +33,17 @@ fi
 # root 密码锁死 — 入口只有 SSH 密钥（可选注入）与 Hyper-V/QEMU 控制台
 passwd -l root >/dev/null 2>&1 || true
 
+# DNS — mkosi 会把构建机的 resolv.conf（如 127.0.0.53 stub）拷进镜像，guest 内不可达
+# （CI 实测：agent-hostd 起来了但 LLM 请求 fetch failed）。启用 resolved：
+# DNS 由 DHCP 提供（QEMU slirp=10.0.2.3 / 云=真实 DHCP），resolv.conf 指向本地 stub
+if systemctl enable systemd-resolved.service >/dev/null 2>&1; then
+  if [ -e /etc/resolv.conf ] && ! [ -L /etc/resolv.conf ]; then rm -f /etc/resolv.conf; fi
+  ln -sfn /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+  echo "[ximo-os] DNS：systemd-resolved 已启用（DHCP 提供上游）"
+else
+  # resolved 不可用时兜底：slirp 的静态 DNS（仅 QEMU 用户态网络正确）
+  echo "nameserver 10.0.2.3" > /etc/resolv.conf 2>/dev/null || true
+  echo "[ximo-os] 警告：resolved 启用失败，resolv.conf 兜底为 10.0.2.3"
+fi
+
 echo "[ximo-os] postinstall 完成：ximo-host 用户就绪（shell=$NOLOGIN），服务经覆盖树软链启用"
