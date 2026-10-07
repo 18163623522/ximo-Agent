@@ -99,7 +99,14 @@ jobs:
           # 再等几秒让 agent-hostd 打印令牌
           sleep 5
           if ! timeout 2 bash -c '</dev/tcp/127.0.0.1/17890' 2>/dev/null; then
-            echo "❌ 450s 内未探测到 cockpit-link 端口"
+            echo "❌ 450s 内未探测到 cockpit-link 端口 — 诊断信息："
+            if timeout 2 bash -c '</dev/tcp/127.0.0.1/12222' 2>/dev/null; then
+              echo "  - SSH(12222) 通 → 系统已引导，agent-hostd 未监听（查串口日志尾部的服务报错）"
+            else
+              echo "  - SSH(12222) 也不通 → 系统未完成引导（查串口日志的内核/紧急模式输出）"
+            fi
+            echo "  --- 串口控制台尾部 ---"
+            sudo tail -80 /tmp/serial-console.log || echo "  （串口日志为空/不存在）"
             sudo pkill -f qemu-system-x86_64 || true
             exit 1
           fi
