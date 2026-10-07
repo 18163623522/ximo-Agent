@@ -173,7 +173,10 @@ export const CMD = {
   displayGeometry: (): { cmd: string; args: string[] } => ({ cmd: 'xdotool', args: ['getdisplaygeometry'] }),
   // 剪贴板 — 读 GUI 应用内容的最快通路（比截图快且准，无需视觉模型）
   clipboardRead: (): { cmd: string; args: string[] } => ({ cmd: 'xclip', args: ['-selection', 'clipboard', '-o'] }),
-  clipboardWrite: (text: string): { cmd: string; args: string[] } => ({ cmd: 'xclip', args: ['-selection', 'clipboard', '-i'] }),
+  // 写入必须经 bash exec + 输出重定向：xclip 写完会守护化持有选区，其进程
+  // 继承 stdout 管道会让 execFile 的 close 永不触发（CI Xvfb 实测 5s 超时）
+  clipboardWrite: (): { cmd: string; args: string[] } =>
+    ({ cmd: 'bash', args: ['-c', 'exec xclip -selection clipboard -i >/dev/null 2>&1'] }),
 } as const
 
 /** xdotool 鼠标按键编码 — 'left'|'middle'|'right' → 1|2|3；滚轮方向 → 4/5/6/7 */

@@ -141,7 +141,7 @@ describe.skipIf(skip)('desktop-bus Xvfb 集成测试 — 真实 X 工具在环',
     await bus.dispatch('clipboard.write', { text })
     const read = await bus.dispatch('clipboard.read') as { text: string }
     expect(read.text).toBe(text)
-  })
+  }, 20_000)
 
   itXvfb('clipboard.read 空态 — 清空后读取返回空串（xclip 非零退出码不污染后续操作）', async () => {
     // 清空剪贴板 — 写入空串再读
@@ -156,7 +156,7 @@ describe.skipIf(skip)('desktop-bus Xvfb 集成测试 — 真实 X 工具在环',
     // 后续操作不受影响
     const size = await bus.dispatch('screen.size') as { width: number }
     expect(size.width).toBeGreaterThan(0)
-  })
+  }, 20_000)
 
   itXvfb('type/key — xdotool 注入键盘事件不报错', async () => {
     // 重新启动 xterm 接收输入
@@ -205,8 +205,7 @@ describe.skipIf(skip)('desktop-bus Xvfb 集成测试 — 真实 X 工具在环',
     const events: unknown[] = []
     const off = bus.onEvent((e) => events.push(e))
 
-    // 启动新窗口 → 窗口集合变化 → 应推送事件
-    if (hasCmd('xterm')) {
+    try {
       const child = spawn('xterm', ['-title', 'XVFB_EVENT_TEST', '-e', 'sleep 60'], {
         env: { ...process.env, DISPLAY },
         stdio: 'ignore',
@@ -215,13 +214,20 @@ describe.skipIf(skip)('desktop-bus Xvfb 集成测试 — 真实 X 工具在环',
       child.unref()
       children.push({ kill: () => child.kill() })
 
-      // 等事件轮询捕获变化（EVENT_POLL_MS=2000，等 3 轮）
-      await new Promise((r) => setTimeout(r, 7000))
+      // 先确认窗口真的出现了（失败时给出比「0 events」更有用的证据）
+      await waitForWindow('XVFB_EVENT_TEST', 15_000)
 
-      off()
+      // 主动驱动轮询（2s 定时器也在跑）——窗口出现后一拍内应推送
+      const deadline = Date.now() + 10_000
+      while (events.length === 0 && Date.now() < deadline) {
+        await bus.checkEvents()
+        if (events.length === 0) await new Promise((r) => setTimeout(r, 500))
+      }
       expect(events.length).toBeGreaterThanOrEqual(1)
       const first = events[0] as { kind: string }
       expect(first.kind).toBe('window')
+    } finally {
+      off()
     }
-  }, 15_000)
+  }, 30_000)
 })

@@ -63,6 +63,10 @@ echo "[4/5] mkosi 构建（首次会下载 Debian 基础包，约几分钟）"
 mkosi build
 
 echo "[5/5] 完成"
+# sudo 构建后把产物属主还给触发用户 — 后续步骤（CI 注入 config.json）需写入 overlay
+if [ "$(id -u)" = "0" ] && [ -n "${SUDO_USER:-}" ]; then
+  chown -R "$SUDO_USER" "$STAGE"
+fi
 ls -lh out/ || true
 cat <<'NEXT'
 

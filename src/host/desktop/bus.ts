@@ -156,7 +156,7 @@ export class DesktopBus {
       }
       case 'clipboard.write': {
         const text = String(params.text ?? '')
-        await this.runCmd(CMD.clipboardWrite(text), text)
+        await this.runCmd(CMD.clipboardWrite(), text)
         return { done: true, length: text.length }
       }
       case 'screen.snapshot': {

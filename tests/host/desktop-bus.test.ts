@@ -292,8 +292,9 @@ describe('desktop-bus — 路由与解析', () => {
 
     const written = await bus.dispatch('clipboard.write', { text: '待粘贴文本' }) as { done: boolean; length: number }
     expect(written).toEqual({ done: true, length: 5 })
-    expect(calls[1].cmd).toBe('xclip')
-    expect(calls[1].args).toEqual(['-selection', 'clipboard', '-i'])
+    // 写入经 bash exec + 输出重定向（xclip 守护进程继承 stdout 管道会让 execFile 永不 close）
+    expect(calls[1].cmd).toBe('bash')
+    expect(calls[1].args).toEqual(['-c', 'exec xclip -selection clipboard -i >/dev/null 2>&1'])
     expect(calls[1].stdin).toBe('待粘贴文本')
   })
 
