@@ -12,7 +12,18 @@ import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url))
+// 兼容 ESM/CJS：host 产物是 esbuild CJS 单文件，import.meta 被降级为 {} 会报错；
+// ESM 中 __dirname 不存在。运行时检测可用来源。
+const _moduleDir: string = (() => {
+  // CJS 路径（host 产物 / vitest CJS）— __dirname 由 esbuild 或 Node CJS 注入
+  // eslint-disable-next-line no-restricted-syntax
+  if (typeof (globalThis as Record<string, unknown>).__dirname === 'string') {
+    return (globalThis as { __dirname: string }).__dirname
+  }
+  // ESM 路径（Electron 主应用）
+  // eslint-disable-next-line no-restricted-syntax
+  return fileURLToPath(new URL('.', import.meta.url))
+})()
 
 // ====== 类型 ======
 
@@ -86,7 +97,7 @@ const PRETOKENIZER_REGEX = new RegExp(
 
 function resolveTokenizerPath(): string {
   const candidates = [
-    join(__dirname, 'tokenizer', 'tokenizer.json'),
+    join(_moduleDir, 'tokenizer', 'tokenizer.json'),
     join(process.cwd(), 'src', 'main', 'deepseek', 'tokenizer', 'tokenizer.json')
   ]
   for (const p of candidates) {

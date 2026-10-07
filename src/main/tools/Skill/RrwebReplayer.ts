@@ -1,11 +1,8 @@
-import { join } from 'path'
-import { fileURLToPath } from 'url'
 import { BrowserManager } from '@main/tools/Browser/BrowserManager'
+import { rrwebBundlePath } from './constants'
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url))
-
-/** rrweb UMD bundle 的文件路径 */
-const RRWEB_BUNDLE_PATH = join(__dirname, '../../../node_modules/rrweb/dist/rrweb.umd.cjs')
+/** rrweb UMD bundle 的文件路径（兼容 ESM/CJS，见 constants.ts） */
+const RRWEB_BUNDLE_PATH = rrwebBundlePath()
 
 /**
  * RrwebReplayer — 在 Playwright 页面中回放 rrweb 事件流

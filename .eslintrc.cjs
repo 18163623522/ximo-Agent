@@ -39,9 +39,27 @@ module.exports = {
   ignorePatterns: [
     'out/',
     'dist/',
+    'dist-host/',
     'release/',
     'node_modules/',
     '*.config.js',
     '*.config.ts',
+  ],
+  overrides: [
+    {
+      // host 可移植层 — 这些模块被 esbuild 打包成 CJS 单文件跑在裸 Node 上，
+      // import.meta.url 会被降级为 {} 导致 TypeError。
+      // 参见 src/host/tools/office-docs-tool.ts 的同类修复说明。
+      files: ['src/main/tools/**/*.ts', 'src/main/deepseek/**/*.ts', 'src/host/**/*.ts'],
+      rules: {
+        'no-restricted-syntax': ['error',
+          {
+            // 禁止 import.meta.url（import.meta 其他用法不限制）
+            selector: "MemberExpression[object.meta='meta'][property='url']",
+            message: 'host 可移植层禁止 import.meta.url — esbuild CJS 产物中 import.meta 被降级为 {}，会导致 TypeError。用 __dirname（CJS）或条件检测代替。',
+          },
+        ],
+      },
+    },
   ],
 }

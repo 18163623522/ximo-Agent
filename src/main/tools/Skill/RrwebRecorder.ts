@@ -1,14 +1,11 @@
-import { join } from 'path'
-import { fileURLToPath } from 'url'
 import { readFile } from 'fs/promises'
 import type { Page } from 'playwright'
 import { appendRrwebEvent } from '@main/SkillStore'
 import { executeWebviewCommand } from '@main/tools/Browser/WebviewBridge'
+import { rrwebBundlePath } from './constants'
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url))
-
-/** rrweb UMD bundle 的文件路径 */
-const RRWEB_BUNDLE_PATH = join(__dirname, '../../../node_modules/rrweb/dist/rrweb.umd.cjs')
+/** rrweb UMD bundle 的文件路径（兼容 ESM/CJS，见 constants.ts） */
+const RRWEB_BUNDLE_PATH = rrwebBundlePath()
 
 /**
  * RrwebRecorder — 在 Playwright 页面中注入 rrweb 录制代码
